@@ -1,6 +1,6 @@
 //! Integration tests for bootstrap/TOFU mode
 
-use usg_est_client::BootstrapClient;
+use usg_est_client::bootstrap::BootstrapClient;
 use crate::integration::MockEstServer;
 use std::fs;
 
@@ -15,7 +15,7 @@ async fn test_bootstrap_mode_ca_cert_retrieval() {
     mock.mock_cacerts(&ca_certs_base64).await;
 
     // Create bootstrap client
-    let bootstrap = BootstrapClient::new(&mock.url(), None)
+    let bootstrap = BootstrapClient::new(&mock.url())
         .expect("Bootstrap client creation failed");
 
     // Test: Fetch CA certs without verification (TOFU)
@@ -57,13 +57,13 @@ async fn test_fingerprint_computation() {
     let cert = usg_est_client::Certificate::from_der(&der).expect("DER decode failed");
 
     // Compute fingerprint
-    let fingerprint = BootstrapClient::compute_fingerprint(&cert);
+    let fingerprint = BootstrapClient::compute_fingerprint(&cert).expect("Fingerprint computation failed");
 
     // Fingerprint should be 32 bytes (SHA-256)
     assert_eq!(fingerprint.len(), 32, "Fingerprint should be 32 bytes");
 
     // Fingerprint should be deterministic
-    let fingerprint2 = BootstrapClient::compute_fingerprint(&cert);
+    let fingerprint2 = BootstrapClient::compute_fingerprint(&cert).expect("Fingerprint computation failed");
     assert_eq!(fingerprint, fingerprint2, "Fingerprint should be deterministic");
 }
 
@@ -165,7 +165,7 @@ async fn test_tofu_flow_end_to_end() {
     mock.mock_cacerts(&ca_certs_base64).await;
 
     // Step 1: Bootstrap - fetch CA certs
-    let bootstrap = BootstrapClient::new(&mock.url(), None)
+    let bootstrap = BootstrapClient::new(&mock.url())
         .expect("Bootstrap client creation failed");
 
     let fetch_result = bootstrap.fetch_ca_certs().await;
@@ -188,12 +188,17 @@ async fn test_tofu_flow_end_to_end() {
     // For this test, we simulate acceptance
 
     // Step 4: Create production EST client with verified CA certs
-    let ca_cert_pem = ca_certs.to_pem_vec().expect("PEM conversion failed");
+    // Convert certificates to DER format (trust_explicit accepts DER or PEM)
+    use der::Encode;
+    let ca_cert_ders: Vec<Vec<u8>> = ca_certs
+        .iter()
+        .map(|cert| cert.to_der().expect("DER encoding failed"))
+        .collect();
 
     let config = usg_est_client::EstClientConfig::builder()
         .server_url(&mock.url())
         .expect("Valid URL")
-        .trust_explicit(ca_cert_pem)
+        .trust_explicit(ca_cert_ders)
         .build()
         .expect("Config creation failed");
 

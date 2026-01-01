@@ -38,6 +38,11 @@ impl MockEstServer {
         self.server.uri()
     }
 
+    /// Get a reference to the inner MockServer for custom mocking
+    pub fn inner(&self) -> &MockServer {
+        &self.server
+    }
+
     /// Mock a successful CA certificates response
     pub async fn mock_cacerts(&self, pkcs7_base64: &str) {
         Mock::given(method("GET"))

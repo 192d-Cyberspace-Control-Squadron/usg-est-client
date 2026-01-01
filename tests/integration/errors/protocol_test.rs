@@ -46,7 +46,7 @@ async fn test_missing_required_headers() {
     Mock::given(method("POST"))
         .and(path("/.well-known/est/simpleenroll"))
         .respond_with(ResponseTemplate::new(202)) // No Retry-After header
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     // Create EST client
@@ -118,7 +118,7 @@ async fn test_http_status_code_handling() {
     Mock::given(method("POST"))
         .and(path("/.well-known/est/simpleenroll"))
         .respond_with(ResponseTemplate::new(400).set_body_string("Bad Request"))
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()
@@ -162,7 +162,7 @@ async fn test_empty_response_body() {
                 .set_body_string("")
                 .insert_header("Content-Type", "application/pkcs7-mime")
         )
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()
@@ -202,7 +202,7 @@ async fn test_redirect_handling() {
             ResponseTemplate::new(302)
                 .insert_header("Location", "https://other.example.com/cacerts")
         )
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()
@@ -245,7 +245,7 @@ async fn test_missing_content_type_header() {
                 .set_body_string("some data")
                 // No Content-Type header
         )
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()

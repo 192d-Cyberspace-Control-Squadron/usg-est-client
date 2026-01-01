@@ -110,10 +110,11 @@ async fn test_invalid_client_certificate() {
 
     if client_result.is_err() {
         // Expected - invalid cert/key should cause TLS error
+        let err_msg = client_result.unwrap_err().to_string();
         assert!(
-            client_result.unwrap_err().to_string().contains("TLS") ||
-            client_result.unwrap_err().to_string().contains("certificate") ||
-            client_result.unwrap_err().to_string().contains("key"),
+            err_msg.contains("TLS") ||
+            err_msg.contains("certificate") ||
+            err_msg.contains("key"),
             "Should fail with TLS/certificate/key error"
         );
     }

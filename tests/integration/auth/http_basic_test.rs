@@ -1,6 +1,6 @@
 //! Integration tests for HTTP Basic authentication
 
-use usg_est_client::{EstClient, EstClientConfig, HttpAuth, csr::CsrBuilder};
+use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 use crate::integration::MockEstServer;
 use std::fs;
 
@@ -18,10 +18,7 @@ async fn test_successful_http_basic_auth() {
     let config = EstClientConfig::builder()
         .server_url(&mock.url())
         .expect("Valid URL")
-        .http_auth(HttpAuth {
-            username: "testuser".to_string(),
-            password: "testpass".to_string(),
-        })
+        .http_auth("testuser", "testpass")
         .trust_any_insecure()
         .build()
         .expect("Valid config");
@@ -57,10 +54,7 @@ async fn test_invalid_credentials() {
     let config = EstClientConfig::builder()
         .server_url(&mock.url())
         .expect("Valid URL")
-        .http_auth(HttpAuth {
-            username: "wronguser".to_string(),
-            password: "wrongpass".to_string(),
-        })
+        .http_auth("wronguser", "wrongpass")
         .trust_any_insecure()
         .build()
         .expect("Valid config");
@@ -130,10 +124,7 @@ async fn test_http_basic_auth_header_format() {
     let config = EstClientConfig::builder()
         .server_url("https://test.example.com")
         .expect("Valid URL")
-        .http_auth(HttpAuth {
-            username: "user".to_string(),
-            password: "pass".to_string(),
-        })
+        .http_auth("user", "pass")
         .trust_any_insecure()
         .build()
         .expect("Valid config");
@@ -157,10 +148,7 @@ async fn test_empty_credentials() {
     let config = EstClientConfig::builder()
         .server_url("https://test.example.com")
         .expect("Valid URL")
-        .http_auth(HttpAuth {
-            username: "".to_string(),
-            password: "".to_string(),
-        })
+        .http_auth("", "")
         .trust_any_insecure()
         .build();
 
@@ -175,10 +163,7 @@ async fn test_special_characters_in_credentials() {
     let config = EstClientConfig::builder()
         .server_url("https://test.example.com")
         .expect("Valid URL")
-        .http_auth(HttpAuth {
-            username: "user@example.com".to_string(),
-            password: "p@ss:w0rd!".to_string(),
-        })
+        .http_auth("user@example.com", "p@ss:w0rd!")
         .trust_any_insecure()
         .build();
 

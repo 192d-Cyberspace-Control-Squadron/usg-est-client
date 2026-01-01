@@ -70,7 +70,7 @@ async fn test_retry_after_zero_seconds() {
             ResponseTemplate::new(202)
                 .insert_header("Retry-After", "0")
         )
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()
@@ -108,7 +108,7 @@ async fn test_retry_after_large_value() {
             ResponseTemplate::new(202)
                 .insert_header("Retry-After", "86400") // 24 hours
         )
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()
@@ -146,7 +146,7 @@ async fn test_malformed_retry_after_header() {
             ResponseTemplate::new(202)
                 .insert_header("Retry-After", "not-a-number")
         )
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()
@@ -184,7 +184,7 @@ async fn test_http_date_retry_after() {
             ResponseTemplate::new(202)
                 .insert_header("Retry-After", "Wed, 21 Oct 2025 07:28:00 GMT")
         )
-        .mount(&mock.server)
+        .mount(mock.inner())
         .await;
 
     let config = EstClientConfig::builder()
