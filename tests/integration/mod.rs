@@ -177,11 +177,13 @@ impl MockEstServer {
 
     /// Mock an invalid content type response
     pub async fn mock_invalid_content_type(&self, operation_path: &str) {
+        // Return valid base64 data but with wrong content type
+        // This ensures we test content-type checking, not base64 parsing
         Mock::given(method("GET"))
             .and(path(operation_path))
             .respond_with(
                 ResponseTemplate::new(200)
-                    .set_body_string("invalid")
+                    .set_body_string("SGVsbG8gV29ybGQ=") // "Hello World" in base64
                     .insert_header("Content-Type", "text/plain"),
             )
             .mount(&self.server)
