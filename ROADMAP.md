@@ -382,7 +382,17 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ⚠️  Create revocation example (`examples/check_revocation.rs`) - TODO
 - ⚠️  Document revocation checking in `docs/security.md` - TODO
 
-#### 10.2.3 PKCS#11 Support
+#### 10.2.3 Hardware Security Module (HSM) Integration
+
+- [ ] Research HSM integration patterns in Rust
+- [ ] Design HSM key provider trait (`src/hsm/mod.rs`)
+- [ ] Implement HSM-backed private key signing interface
+- [ ] Implement HSM-backed CSR generation
+- [ ] Add `hsm` feature flag to `Cargo.toml`
+- [ ] Create HSM example (`examples/hsm_enroll.rs`)
+- [ ] Document HSM usage in `docs/configuration.md`
+
+#### 10.2.4 PKCS#11 Support
 
 - [ ] Add pkcs11 crate dependency (feature-gated)
 - [ ] Create PKCS#11 provider implementation (`src/pkcs11.rs`)
@@ -393,7 +403,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - [ ] Create PKCS#11 example (`examples/pkcs11_enroll.rs`)
 - [ ] Add PKCS#11 security considerations to `docs/security.md`
 
-#### 10.2.4 Encrypted Private Key Decryption ✅ COMPLETE (Core Implementation)
+#### 10.2.5 Encrypted Private Key Decryption ✅ COMPLETE (Core Implementation)
 
 - ✅ Implement CMS EnvelopedData parsing framework (`src/enveloped.rs`)
 - ✅ Add support for common encryption algorithms (AES-128/192/256, 3DES)
@@ -407,7 +417,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ⚠️  Create encrypted key example (`examples/decrypt_server_key.rs`) - TODO
 - ⚠️  Document encrypted key handling in `docs/operations.md` - TODO
 
-#### 10.2.5 Complete CMC Implementation
+#### 10.2.6 Complete CMC Implementation
 
 - [ ] Study CMC specification (RFC 5272, 5273, 5274)
 - [ ] Implement full CMC PKIData structure (`src/types/cmc_full.rs`)
@@ -418,7 +428,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - [ ] Create comprehensive CMC example (`examples/cmc_advanced.rs`)
 - [ ] Document full CMC usage in `docs/operations.md`
 
-#### 10.2.6 Certificate Chain Validation ✅ COMPLETE (Core Implementation)
+#### 10.2.7 Certificate Chain Validation ✅ COMPLETE (Core Implementation)
 
 - ✅ Create certificate validation module (`src/validation.rs`)
 - ✅ Implement chain building from issued certificate to root
@@ -497,17 +507,6 @@ These features are outside the core EST protocol scope but could be considered f
 - [ ] Add `scep` feature flag to `Cargo.toml`
 - [ ] Create SCEP example (`examples/scep_enroll.rs`)
 - [ ] Document SCEP vs EST comparison in docs
-
-#### Hardware Security Module (HSM) Integration
-
-- [ ] Research HSM integration patterns in Rust
-- [ ] Evaluate PKCS#11 libraries (cryptoki, pkcs11)
-- [ ] Design HSM key provider trait (`src/hsm/mod.rs`)
-- [ ] Implement HSM-backed private key signing
-- [ ] Implement HSM-backed CSR generation
-- [ ] Add `hsm` feature flag to `Cargo.toml`
-- [ ] Create HSM example (`examples/hsm_enroll.rs`)
-- [ ] Document HSM usage in `docs/configuration.md`
 
 ---
 
