@@ -139,6 +139,12 @@ pub mod validation;
 #[cfg(feature = "metrics")]
 pub mod metrics;
 
+#[cfg(feature = "revocation")]
+pub mod revocation;
+
+#[cfg(feature = "enveloped")]
+pub mod enveloped;
+
 // Re-export main types at crate root for convenience
 pub use client::EstClient;
 pub use config::{

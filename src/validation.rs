@@ -30,7 +30,6 @@
 //! ```
 
 use crate::error::{EstError, Result};
-use std::collections::HashSet;
 use std::time::SystemTime;
 use tracing::{debug, warn};
 use x509_cert::Certificate;
