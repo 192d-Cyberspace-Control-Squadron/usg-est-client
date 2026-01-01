@@ -29,7 +29,7 @@ async fn test_basic_cmc_request_response() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()

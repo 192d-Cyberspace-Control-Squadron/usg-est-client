@@ -31,7 +31,7 @@ async fn test_successful_http_basic_auth() {
 
     // Create EST client with HTTP Basic auth
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .http_auth("testuser", "testpass")
         .trust_any_insecure()
@@ -51,12 +51,11 @@ async fn test_successful_http_basic_auth() {
     // Test: Enrollment with HTTP Basic auth
     let result = client.simple_enroll(&csr_der).await;
 
-    // The mock server doesn't validate credentials, but we verify
-    // the Authorization header is sent
-    if result.is_ok() || result.is_err() {
-        // Either outcome is acceptable - we're testing the client sends auth
-        assert!(true, "Client configured with HTTP Basic auth");
-    }
+    // Should succeed against the mock server when basic auth is provided
+    assert!(
+        result.is_ok(),
+        "Enrollment should succeed with HTTP Basic auth"
+    );
 }
 
 #[tokio::test]
@@ -69,7 +68,7 @@ async fn test_invalid_credentials() {
 
     // Create EST client with (potentially wrong) credentials
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .http_auth("wronguser", "wrongpass")
         .trust_any_insecure()
@@ -109,7 +108,7 @@ async fn test_missing_authorization_header() {
 
     // Create EST client WITHOUT authentication
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()

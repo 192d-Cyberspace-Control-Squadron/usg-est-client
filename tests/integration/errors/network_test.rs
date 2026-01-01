@@ -142,9 +142,10 @@ async fn test_tls_handshake_failure() {
 
         // Should fail due to TLS/certificate issues
         // (Note: This test might pass if the site starts working)
-        if result.is_err() {
-            assert!(true, "TLS validation works as expected");
-        }
+        assert!(
+            result.is_err(),
+            "TLS validation should fail with invalid certificates"
+        );
     }
 }
 

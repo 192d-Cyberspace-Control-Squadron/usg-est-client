@@ -33,7 +33,7 @@ async fn test_successful_csrattrs_retrieval() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -71,7 +71,7 @@ async fn test_csrattrs_not_supported() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -108,7 +108,7 @@ async fn test_malformed_csrattrs_response() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()

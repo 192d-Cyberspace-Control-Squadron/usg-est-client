@@ -29,7 +29,7 @@ async fn test_invalid_content_type() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -75,7 +75,7 @@ async fn test_missing_required_headers() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -91,7 +91,7 @@ async fn test_missing_required_headers() {
         .expect("CSR generation failed");
 
     // Test: Enrollment with missing Retry-After header
-    let result = client.simple_enroll(&csr_der).await;
+    let _ = client.simple_enroll(&csr_der).await;
 
     // Behavior depends on implementation - might fail or default to 0
     // At minimum, should not panic
@@ -108,7 +108,7 @@ async fn test_malformed_response_bodies() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -154,7 +154,7 @@ async fn test_http_status_code_handling() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -203,7 +203,7 @@ async fn test_empty_response_body() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -248,7 +248,7 @@ async fn test_redirect_handling() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -258,7 +258,7 @@ async fn test_redirect_handling() {
         .await
         .expect("Client creation failed");
 
-    let result = client.get_ca_certs().await;
+    let _ = client.get_ca_certs().await;
 
     // reqwest follows redirects by default
     // Should either follow redirect or fail
@@ -294,7 +294,7 @@ async fn test_missing_content_type_header() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()

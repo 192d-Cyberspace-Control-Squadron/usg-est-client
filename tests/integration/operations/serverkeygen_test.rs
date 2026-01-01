@@ -35,7 +35,7 @@ async fn test_successful_serverkeygen() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -112,7 +112,7 @@ async fn test_malformed_multipart_response() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()

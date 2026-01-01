@@ -41,7 +41,7 @@ async fn test_successful_reenrollment() {
 
     // Create EST client with client certificate
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .client_identity(ClientIdentity::new(client_cert_pem, client_key_pem))
         .trust_any_insecure()
@@ -94,7 +94,7 @@ async fn test_missing_client_certificate() {
 
     // Create EST client WITHOUT client certificate
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()

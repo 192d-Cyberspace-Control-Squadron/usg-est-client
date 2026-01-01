@@ -27,7 +27,7 @@ async fn test_retry_after_header_parsing() {
     mock.mock_enroll_pending(300).await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -104,7 +104,7 @@ async fn test_retry_after_zero_seconds() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -146,7 +146,7 @@ async fn test_retry_after_large_value() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -186,7 +186,7 @@ async fn test_malformed_retry_after_header() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -201,7 +201,7 @@ async fn test_malformed_retry_after_header() {
         .build()
         .expect("CSR generation failed");
 
-    let result = client.simple_enroll(&csr_der).await;
+    let _ = client.simple_enroll(&csr_der).await;
 
     // Should handle gracefully - either error or default to 0
     // Implementation-dependent behavior
@@ -229,7 +229,7 @@ async fn test_http_date_retry_after() {
         .await;
 
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -244,7 +244,7 @@ async fn test_http_date_retry_after() {
         .build()
         .expect("CSR generation failed");
 
-    let result = client.simple_enroll(&csr_der).await;
+    let _ = client.simple_enroll(&csr_der).await;
 
     // Should handle HTTP-date format (may convert to seconds or error)
     // Implementation-dependent

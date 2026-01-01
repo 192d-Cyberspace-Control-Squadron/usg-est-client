@@ -33,7 +33,7 @@ async fn test_successful_cacerts_retrieval() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure() // OK for testing
         .build()
@@ -65,7 +65,7 @@ async fn test_invalid_content_type_handling() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -97,7 +97,7 @@ async fn test_malformed_pkcs7_response() {
     let mock = MockEstServer::start().await;
 
     // Load malformed PKCS#7 fixture
-    let malformed = fs::read_to_string("tests/fixtures/pkcs7/invalid-base64.txt")
+    let _malformed = fs::read_to_string("tests/fixtures/pkcs7/invalid-base64.txt")
         .expect("Failed to load malformed fixture");
 
     // Mock malformed response
@@ -106,7 +106,7 @@ async fn test_malformed_pkcs7_response() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -137,7 +137,7 @@ async fn test_empty_certificate_list() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()

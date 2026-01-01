@@ -37,7 +37,7 @@ async fn test_successful_tls_client_cert_auth() {
 
     // Create EST client with TLS client certificate
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .client_identity(ClientIdentity::new(client_cert_pem, client_key_pem))
         .trust_any_insecure() // OK for testing
@@ -57,15 +57,11 @@ async fn test_successful_tls_client_cert_auth() {
     // Test: Re-enrollment with client cert (should use TLS client auth)
     let result = client.simple_reenroll(&csr_der).await;
 
-    // Note: Mock server doesn't validate TLS client certs, but we verify
-    // the client can be configured with them
-    if result.is_ok() || result.is_err() {
-        // Either outcome is acceptable - we're testing configuration, not server behavior
-        assert!(
-            true,
-            "Client successfully configured with TLS client certificate"
-        );
-    }
+    // Note: Mock server doesn't validate TLS client certs, but client should succeed
+    assert!(
+        result.is_ok(),
+        "Client should enroll successfully with TLS client certificate"
+    );
 }
 
 #[tokio::test]
@@ -79,7 +75,7 @@ async fn test_missing_client_certificate() {
 
     // Create EST client WITHOUT client certificate
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -118,7 +114,7 @@ async fn test_invalid_client_certificate() {
 
     // Try to create EST client with invalid cert/key
     let config_result = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .client_identity(ClientIdentity::new(
             invalid_cert.to_vec(),
@@ -130,17 +126,18 @@ async fn test_invalid_client_certificate() {
     // Building config should succeed (validation happens during TLS handshake)
     assert!(config_result.is_ok(), "Config creation should succeed");
 
-    // Client creation may fail during TLS setup
+    // Client creation should fail during TLS setup with invalid identity material
     let client_result = EstClient::new(config_result.unwrap()).await;
+    assert!(
+        client_result.is_err(),
+        "Invalid client identity should prevent client creation"
+    );
 
-    if client_result.is_err() {
-        // Expected - invalid cert/key should cause TLS error
-        let err_msg = client_result.unwrap_err().to_string();
-        assert!(
-            err_msg.contains("TLS") || err_msg.contains("certificate") || err_msg.contains("key"),
-            "Should fail with TLS/certificate/key error"
-        );
-    }
+    let err_msg = client_result.unwrap_err().to_string();
+    assert!(
+        err_msg.contains("TLS") || err_msg.contains("certificate") || err_msg.contains("key"),
+        "Should fail with TLS/certificate/key error"
+    );
 }
 
 #[tokio::test]
@@ -160,7 +157,7 @@ async fn test_certificate_chain_validation() {
 
     // Create EST client with client cert
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .client_identity(ClientIdentity::new(client_cert_pem, client_key_pem))
         .trust_any_insecure()

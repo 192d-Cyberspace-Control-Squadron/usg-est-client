@@ -30,7 +30,7 @@ async fn test_bootstrap_mode_ca_cert_retrieval() {
     mock.mock_cacerts(&ca_certs_base64).await;
 
     // Create bootstrap client
-    let bootstrap = BootstrapClient::new(&mock.url()).expect("Bootstrap client creation failed");
+    let bootstrap = BootstrapClient::new(mock.url()).expect("Bootstrap client creation failed");
 
     // Test: Fetch CA certs without verification (TOFU)
     let result = bootstrap.fetch_ca_certs().await;
@@ -190,7 +190,7 @@ async fn test_tofu_flow_end_to_end() {
     mock.mock_cacerts(&ca_certs_base64).await;
 
     // Step 1: Bootstrap - fetch CA certs
-    let bootstrap = BootstrapClient::new(&mock.url()).expect("Bootstrap client creation failed");
+    let bootstrap = BootstrapClient::new(mock.url()).expect("Bootstrap client creation failed");
 
     let fetch_result = bootstrap.fetch_ca_certs().await;
 
@@ -223,7 +223,7 @@ async fn test_tofu_flow_end_to_end() {
         .collect();
 
     let config = usg_est_client::EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_explicit(ca_cert_ders)
         .build()

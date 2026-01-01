@@ -26,7 +26,7 @@ async fn test_tls_12_minimum_version_enforcement() {
 
     // Create EST client (rustls enforces TLS 1.2+ by default)
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -45,7 +45,7 @@ async fn test_tls_13_support() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure()
         .build()
@@ -104,7 +104,7 @@ async fn test_hostname_verification() {
 
     // Create EST client
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure() // Required for mock server
         .build()
@@ -126,7 +126,7 @@ async fn test_insecure_mode_for_testing_only() {
 
     // Create EST client with insecure mode (for testing)
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .trust_any_insecure() // ⚠️ ONLY FOR TESTING
         .build()
@@ -156,7 +156,7 @@ async fn test_tls_configuration_with_client_certificate() {
 
     // Create EST client with TLS client cert
     let config = EstClientConfig::builder()
-        .server_url(&mock.url())
+        .server_url(mock.url())
         .expect("Valid URL")
         .client_identity(usg_est_client::ClientIdentity::new(
             client_cert_pem,

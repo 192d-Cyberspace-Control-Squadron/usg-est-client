@@ -24,7 +24,6 @@ use wiremock::{Mock, MockServer, ResponseTemplate};
 
 /// Content types used in EST protocol
 pub const CONTENT_TYPE_PKCS7: &str = "application/pkcs7-mime";
-pub const CONTENT_TYPE_PKCS10: &str = "application/pkcs10";
 pub const CONTENT_TYPE_CSRATTRS: &str = "application/csrattrs";
 pub const CONTENT_TYPE_MULTIPART: &str = "multipart/mixed";
 
@@ -251,26 +250,6 @@ pub mod fixtures {
             0x2a, 0x86, 0x48, 0x86, 0xf7, 0x0d, 0x01, 0x09, 0x07, // challengePassword OID
         ];
         BASE64_STANDARD.encode(&der)
-    }
-
-    /// Generate a simple multipart response for serverkeygen
-    pub fn simple_multipart_response(boundary: &str, cert_pem: &str, key_pem: &str) -> String {
-        format!(
-            "--{boundary}\r\n\
-             Content-Type: application/pkcs7-mime\r\n\
-             Content-Transfer-Encoding: base64\r\n\
-             \r\n\
-             {cert_base64}\r\n\
-             --{boundary}\r\n\
-             Content-Type: application/pkcs8\r\n\
-             Content-Transfer-Encoding: base64\r\n\
-             \r\n\
-             {key_base64}\r\n\
-             --{boundary}--\r\n",
-            boundary = boundary,
-            cert_base64 = BASE64_STANDARD.encode(cert_pem),
-            key_base64 = BASE64_STANDARD.encode(key_pem)
-        )
     }
 }
 
