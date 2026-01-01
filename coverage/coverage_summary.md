@@ -1,80 +1,114 @@
-# Test Coverage Summary
+# Code Coverage Summary
 
-**Overall Coverage: 26.21%** (232/885 lines covered)
+**Last Updated**: 2026-01-01
+**Coverage Tool**: cargo-tarpaulin
+
+## Overall Coverage
+
+**55.82%** coverage (494/885 lines covered)
 
 ## Coverage by Module
 
-| Module | Coverage | Lines Covered | Total Lines | Priority |
-|--------|----------|---------------|-------------|----------|
-| src/client.rs | 0.00% | 0/162 | 162 | 🔴 HIGH |
-| src/types/mod.rs | 0.00% | 0/14 | 14 | 🔴 HIGH |
-| src/operations/reenroll.rs | 0.00% | 0/15 | 15 | 🔴 HIGH |
-| src/operations/cacerts.rs | 10.71% | 3/28 | 28 | 🟡 MEDIUM |
-| src/tls.rs | 13.33% | 12/90 | 90 | 🟡 MEDIUM |
-| src/types/csr_attrs.rs | 17.57% | 13/74 | 74 | 🟡 MEDIUM |
-| src/types/pkcs7.rs | 21.88% | 14/64 | 64 | 🟡 MEDIUM |
-| src/operations/fullcmc.rs | 28.57% | 8/28 | 28 | 🟢 LOW |
-| src/config.rs | 33.68% | 32/95 | 95 | 🟢 LOW |
-| src/types/cmc.rs | 34.21% | 13/38 | 38 | 🟢 LOW |
-| src/bootstrap.rs | 40.26% | 31/77 | 77 | 🟢 LOW |
-| src/operations/serverkeygen.rs | 42.86% | 9/21 | 21 | 🟢 LOW |
-| src/error.rs | 48.48% | 16/33 | 33 | 🟢 LOW |
-| src/csr.rs | 53.10% | 60/113 | 113 | 🟢 LOW |
-| src/operations/csrattrs.rs | 63.16% | 12/19 | 19 | ✅ GOOD |
-| src/operations/enroll.rs | 64.29% | 9/14 | 14 | ✅ GOOD |
+| Module | Covered/Total | Percentage |
+|--------|---------------|------------|
+| src/bootstrap.rs | 54/77 | 70.13% |
+| src/client.rs | 109/162 | 67.28% |
+| src/error.rs | 27/33 | 81.82% |
+| src/types/pkcs7.rs | 40/64 | 62.50% |
+| src/csr.rs | 65/113 | 57.52% |
+| src/config.rs | 52/95 | 54.74% |
+| src/types/csr_attrs.rs | 39/74 | 52.70% |
+| src/tls.rs | 45/90 | 50.00% |
+| src/types/cmc.rs | 19/38 | 50.00% |
+| src/types/mod.rs | 3/14 | 21.43% |
+| src/operations/csrattrs.rs | 12/19 | 63.16% |
+| src/operations/enroll.rs | 9/14 | 64.29% |
+| src/operations/serverkeygen.rs | 9/21 | 42.86% |
+| src/operations/fullcmc.rs | 8/28 | 28.57% |
+| src/operations/reenroll.rs | 0/15 | 0.00% |
+| src/operations/cacerts.rs | 3/28 | 10.71% |
 
-## Why Coverage is Lower Than Expected
+## Test Suite Breakdown
 
-The low coverage (26.21%) is primarily due to:
+### Unit Tests (39 tests)
+- bootstrap: 3 tests
+- config: 0 tests
+- csr: 6 tests
+- operations: 11 tests
+- types: 17 tests
+- tls: 2 tests
 
-1. **No Integration Tests**: The project has 39 unit tests but no integration tests that actually call the main `EstClient` methods
-2. **Client Module Untested**: `src/client.rs` (162 lines) has 0% coverage - this is the main public API
-3. **Async Code**: Many functions are async and require mock HTTP servers to test properly
-4. **Network Operations**: Real EST operations require a live server or complex mocking
+### Integration Tests (80 tests)
+- Infrastructure: 2 tests
+- Operations: 25 tests
+  - cacerts: 5 tests
+  - enrollment: 9 tests
+  - re-enrollment: 3 tests
+  - CSR attributes: 4 tests
+  - server key generation: 2 tests
+  - full CMC: 2 tests
+- Authentication: 11 tests
+  - TLS client certificates: 6 tests
+  - HTTP Basic auth: 5 tests
+- TLS Configuration: 21 tests
+  - Config tests: 11 tests
+  - Bootstrap/TOFU: 10 tests
+- Error Handling: 21 tests
+  - Network errors: 8 tests
+  - Protocol errors: 9 tests
+  - Retry logic: 4 tests
 
-## What IS Tested (Unit Tests)
+**Total Tests**: 119 tests (all passing)
 
-Currently tested with good coverage:
-- ✅ CSR building and validation (53%)
-- ✅ Error handling and display (48%)
-- ✅ Configuration builder patterns (34%)
-- ✅ Bootstrap fingerprint operations (40%)
-- ✅ Type conversions and parsing helpers (34-64%)
+## Coverage Progress
 
-## What NEEDS Testing (Integration Tests)
+### Phase 10.1 Impact
+- **Before**: 26.21% (232/885 lines)
+- **After**: 55.82% (494/885 lines)
+- **Improvement**: +29.61 percentage points (+113% increase)
 
-Areas with 0% coverage that need integration tests:
-- 🔴 `EstClient` HTTP operations (all async methods)
-- 🔴 TLS configuration and connection setup
-- 🔴 PKCS#7/CMS parsing from real responses
-- 🔴 Multipart response parsing (server keygen)
-- 🔴 Error handling for HTTP errors
-- 🔴 Retry logic for pending enrollments
+## Areas Needing Coverage
 
-## Recommendations
+### High Priority (Core Operations <50%)
+1. **src/operations/reenroll.rs** (0%) - No coverage yet
+2. **src/operations/cacerts.rs** (10.71%) - Critical operation
+3. **src/operations/fullcmc.rs** (28.57%) - CMC support
+4. **src/operations/serverkeygen.rs** (42.86%) - Server key generation
 
-### Immediate Actions
-1. **Add Mock Server Tests**: Use `wiremock` (already in dev-dependencies) to test EstClient methods
-2. **Test Error Paths**: Add tests for HTTP errors, authentication failures, invalid responses
-3. **Test Response Parsing**: Add fixtures for PKCS#7, multipart, and CMC responses
+### Medium Priority (Infrastructure <50%)
+1. **src/types/mod.rs** (21.43%) - Type definitions
+2. **src/tls.rs** (50.00%) - TLS handling
 
-### Coverage Goals
-- **Target**: 70-80% for library code
-- **Minimum**: 60% for public API (EstClient methods)
-- **Current**: 26.21% overall
+### Notes
+- Operations modules have lower coverage because they primarily contain
+  integration code that's tested through end-to-end scenarios
+- Some operations (reenroll, fullcmc, serverkeygen) are tested via
+  integration tests but those paths aren't fully exercised yet
+- Bootstrap and error handling modules have excellent coverage (>70%)
 
-### Test Files to Add
-1. `tests/client_integration.rs` - EstClient with mock server
-2. `tests/fixtures/` - Sample EST responses (PKCS#7, multipart, etc.)
-3. `tests/error_handling.rs` - Error scenarios
-4. `tests/retry_logic.rs` - Pending enrollment retry
+## Next Steps for Coverage Improvement
 
-## Note
+1. Add integration tests that exercise re-enrollment flows
+2. Create tests for full CMC operations
+3. Improve server key generation test coverage
+4. Add more cacerts operation edge cases
+5. Target: 70-80% overall coverage
 
-The current 39 unit tests are valuable for testing:
-- Pure functions (CSR building, fingerprint computation)
-- Type conversions
-- Configuration validation
-- Error type construction
+## Running Coverage Locally
 
-However, the main value proposition of this library (EST operations) requires integration tests with mocked HTTP responses.
+```bash
+# Generate HTML coverage report
+cargo tarpaulin --out Html --output-dir coverage --skip-clean --timeout 300 --exclude-files 'tests/*'
+
+# View report
+open coverage/tarpaulin-report.html
+```
+
+## CI/CD Integration
+
+Coverage reports are generated automatically on:
+- Push to main branch
+- Pull request creation
+- Manual workflow dispatch
+
+Reports are uploaded to the Actions artifacts and can be viewed in the GitHub Actions summary.
