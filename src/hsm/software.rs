@@ -69,9 +69,7 @@
 use super::{KeyAlgorithm, KeyHandle, KeyMetadata, KeyProvider, ProviderInfo};
 use crate::error::{EstError, Result};
 use async_trait::async_trait;
-use const_oid::db::rfc5912::{
-    ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, SHA_256_WITH_RSA_ENCRYPTION,
-};
+use const_oid::db::rfc5912::{ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, SHA_256_WITH_RSA_ENCRYPTION};
 use der::Decode;
 use rcgen::{KeyPair, SignatureAlgorithm};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
@@ -162,7 +160,8 @@ impl SoftwareKeyProvider {
     /// Get a cloned key pair for a handle.
     fn get_key_pair(&self, handle: &KeyHandle) -> Result<(KeyPair, KeyMetadata)> {
         let keys = self.keys.read().unwrap();
-        let (kp, metadata) = keys.get(&handle.id)
+        let (kp, metadata) = keys
+            .get(&handle.id)
             .ok_or_else(|| EstError::csr(format!("Key not found: {:?}", handle.id)))?;
 
         // Clone by serializing and deserializing the key
@@ -290,11 +289,7 @@ impl KeyProvider for SoftwareKeyProvider {
                 continue;
             };
 
-            handles.push(KeyHandle::new(
-                key_id.clone(),
-                algorithm,
-                metadata.clone(),
-            ));
+            handles.push(KeyHandle::new(key_id.clone(), algorithm, metadata.clone()));
         }
 
         Ok(handles)
@@ -407,7 +402,9 @@ mod tests {
             }
             Err(e) => {
                 // RSA key generation may not be available
-                assert!(e.to_string().contains("no support") || e.to_string().contains("not supported"));
+                assert!(
+                    e.to_string().contains("no support") || e.to_string().contains("not supported")
+                );
             }
         }
     }
@@ -452,7 +449,10 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result.unwrap_err().to_string().contains("Unsupported RSA key size"));
+        assert!(result
+            .unwrap_err()
+            .to_string()
+            .contains("Unsupported RSA key size"));
     }
 
     #[tokio::test]
