@@ -1,0 +1,2 @@
+Content-Type: application/pkcs7-mime
+some data

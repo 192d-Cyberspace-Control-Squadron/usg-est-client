@@ -238,33 +238,254 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ## Phase 10: Future Enhancements 🔄 IN PROGRESS
 
-### 10.1 Testing Improvements
+### 10.1 Integration Testing Infrastructure
 
-- [ ] **Integration tests with wiremock** - Mock HTTP server tests
-- [ ] **Fixtures** - Sample EST responses (PKCS#7, multipart, CMC)
-- [ ] **Error scenario tests** - HTTP errors, invalid responses
-- [ ] **TLS configuration tests** - Test certificates
+#### 10.1.1 Wiremock Setup (`tests/integration/`)
+
+- [ ] Add wiremock dev dependency to `Cargo.toml`
+- [ ] Create `tests/integration/mod.rs` with common test utilities
+- [ ] Create mock EST server builder helper
+- [ ] Set up TLS certificate fixtures for test server
+- [ ] Create helper functions for common EST response mocks
+
+#### 10.1.2 Test Fixtures (`tests/fixtures/`)
+
+- [ ] Create `fixtures/pkcs7/` directory
+- [ ] Add sample PKCS#7 certs-only responses (valid)
+- [ ] Add malformed PKCS#7 responses for error testing
+- [ ] Create `fixtures/multipart/` directory
+- [ ] Add sample multipart/mixed responses for serverkeygen
+- [ ] Add boundary parsing edge cases
+- [ ] Create `fixtures/cmc/` directory
+- [ ] Add sample CMC request/response pairs
+- [ ] Create `fixtures/certs/` directory
+- [ ] Add test CA certificates and chains
+- [ ] Add test client certificates and keys
+
+#### 10.1.3 Operation Tests (`tests/integration/operations/`)
+
+- [ ] Create `tests/integration/operations/cacerts_test.rs`
+  - [ ] Test successful CA certs retrieval
+  - [ ] Test invalid content-type handling
+  - [ ] Test malformed PKCS#7 response
+  - [ ] Test empty certificate list
+- [ ] Create `tests/integration/operations/enroll_test.rs`
+  - [ ] Test successful enrollment (HTTP 200)
+  - [ ] Test pending enrollment (HTTP 202 + Retry-After)
+  - [ ] Test authentication required (HTTP 401)
+  - [ ] Test server error (HTTP 500)
+  - [ ] Test CSR validation
+- [ ] Create `tests/integration/operations/reenroll_test.rs`
+  - [ ] Test successful re-enrollment
+  - [ ] Test missing client certificate
+  - [ ] Test expired certificate handling
+- [ ] Create `tests/integration/operations/csrattrs_test.rs`
+  - [ ] Test successful CSR attributes retrieval
+  - [ ] Test HTTP 404 (not supported)
+  - [ ] Test malformed attributes response
+- [ ] Create `tests/integration/operations/serverkeygen_test.rs`
+  - [ ] Test successful server keygen
+  - [ ] Test multipart response parsing
+  - [ ] Test encrypted vs unencrypted keys
+  - [ ] Test malformed multipart response
+- [ ] Create `tests/integration/operations/fullcmc_test.rs`
+  - [ ] Test basic CMC request/response
+  - [ ] Test CMC status codes
+  - [ ] Test CMC error conditions
+
+#### 10.1.4 Authentication Tests (`tests/integration/auth/`)
+
+- [ ] Create `tests/integration/auth/tls_client_cert_test.rs`
+  - [ ] Test successful TLS client cert auth
+  - [ ] Test missing client certificate
+  - [ ] Test invalid client certificate
+  - [ ] Test certificate chain validation
+- [ ] Create `tests/integration/auth/http_basic_test.rs`
+  - [ ] Test successful HTTP Basic auth
+  - [ ] Test invalid credentials
+  - [ ] Test missing Authorization header
+
+#### 10.1.5 TLS Configuration Tests (`tests/integration/tls/`)
+
+- [ ] Create `tests/integration/tls/config_test.rs`
+  - [ ] Test TLS 1.2 minimum version enforcement
+  - [ ] Test TLS 1.3 support
+  - [ ] Test certificate verification with WebPKI roots
+  - [ ] Test certificate verification with explicit trust anchors
+  - [ ] Test hostname verification
+  - [ ] Test insecure mode (for testing only)
+- [ ] Create `tests/integration/tls/bootstrap_test.rs`
+  - [ ] Test bootstrap mode CA cert retrieval
+  - [ ] Test fingerprint computation
+  - [ ] Test fingerprint formatting
+  - [ ] Test fingerprint verification callback
+  - [ ] Test TOFU flow end-to-end
+
+#### 10.1.6 Error Handling Tests (`tests/integration/errors/`)
+
+- [ ] Create `tests/integration/errors/network_test.rs`
+  - [ ] Test connection timeout
+  - [ ] Test connection refused
+  - [ ] Test DNS resolution failure
+  - [ ] Test TLS handshake failure
+- [ ] Create `tests/integration/errors/protocol_test.rs`
+  - [ ] Test invalid content-type
+  - [ ] Test missing required headers
+  - [ ] Test malformed response bodies
+  - [ ] Test unexpected HTTP methods
+- [ ] Create `tests/integration/errors/retry_test.rs`
+  - [ ] Test retry logic for retryable errors
+  - [ ] Test backoff behavior
+  - [ ] Test maximum retry limit
+  - [ ] Test Retry-After header parsing
+
+#### 10.1.7 Coverage Improvements
+
+- [ ] Run `cargo tarpaulin` with integration tests
+- [ ] Identify uncovered code paths in `src/client.rs` (currently 0%)
+- [ ] Identify uncovered code paths in `src/operations/`
+- [ ] Add tests to cover error branches
 - [ ] **Target: 70-80% code coverage** (currently 26.21%)
+- [ ] Update `coverage/coverage_summary.md` with new metrics
 
-### 10.2 Advanced Features (Future)
+---
 
-- [ ] Automatic certificate renewal scheduling
-- [ ] Certificate revocation support (CRL/OCSP)
-- [ ] Hardware security module (HSM) integration
-- [ ] PKCS#11 support for private keys
-- [ ] Encrypted private key decryption (CMS EnvelopedData)
-- [ ] Complete CMC implementation (beyond basic support)
-- [ ] Certificate chain validation helpers
-- [ ] SCEP protocol support
-- [ ] Metrics and monitoring integration
+### 10.2 Advanced Features (Future Roadmap)
 
-### 10.3 Platform Support
+#### 10.2.1 Automatic Certificate Renewal
 
-- ✅ macOS support
-- ✅ Linux support
-- ✅ Windows support (via rustls)
-- [ ] WASM support (investigate feasibility)
-- [ ] Embedded/no_std support (investigate feasibility)
+- [ ] Design renewal scheduler API (`src/renewal.rs`)
+- [ ] Implement certificate expiration monitoring
+- [ ] Implement automatic re-enrollment trigger
+- [ ] Add configurable renewal threshold (e.g., 30 days before expiry)
+- [ ] Implement retry logic for failed renewals
+- [ ] Add renewal event callbacks
+- [ ] Create renewal example (`examples/auto_renewal.rs`)
+- [ ] Document renewal behavior in `docs/operations.md`
+
+#### 10.2.2 Certificate Revocation Support
+
+- [ ] Research CRL (Certificate Revocation List) implementation
+- [ ] Add `crl` feature flag to `Cargo.toml`
+- [ ] Implement CRL download and parsing (`src/revocation/crl.rs`)
+- [ ] Implement CRL caching and refresh logic
+- [ ] Research OCSP (Online Certificate Status Protocol)
+- [ ] Add `ocsp` feature flag to `Cargo.toml`
+- [ ] Implement OCSP request/response (`src/revocation/ocsp.rs`)
+- [ ] Add revocation checking to certificate validation
+- [ ] Create revocation example (`examples/check_revocation.rs`)
+- [ ] Document revocation checking in `docs/security.md`
+
+#### 10.2.3 Hardware Security Module (HSM) Integration
+
+- [ ] Research HSM integration patterns in Rust
+- [ ] Evaluate PKCS#11 libraries (cryptoki, pkcs11)
+- [ ] Design HSM key provider trait (`src/hsm/mod.rs`)
+- [ ] Implement HSM-backed private key signing
+- [ ] Implement HSM-backed CSR generation
+- [ ] Add `hsm` feature flag to `Cargo.toml`
+- [ ] Create HSM example (`examples/hsm_enroll.rs`)
+- [ ] Document HSM usage in `docs/configuration.md`
+
+#### 10.2.4 PKCS#11 Support
+
+- [ ] Add pkcs11 crate dependency (feature-gated)
+- [ ] Create PKCS#11 provider implementation (`src/pkcs11.rs`)
+- [ ] Implement token/slot discovery
+- [ ] Implement key pair generation in PKCS#11 token
+- [ ] Implement signing operations via PKCS#11
+- [ ] Add PKCS#11 configuration to `EstClientConfig`
+- [ ] Create PKCS#11 example (`examples/pkcs11_enroll.rs`)
+- [ ] Add PKCS#11 security considerations to `docs/security.md`
+
+#### 10.2.5 Encrypted Private Key Decryption
+
+- [ ] Implement CMS EnvelopedData parsing (`src/types/enveloped.rs`)
+- [ ] Add support for common encryption algorithms (AES, 3DES)
+- [ ] Implement recipient info parsing
+- [ ] Add key decryption interface to `ServerKeygenResponse`
+- [ ] Create encrypted key example (`examples/decrypt_server_key.rs`)
+- [ ] Document encrypted key handling in `docs/operations.md`
+
+#### 10.2.6 Complete CMC Implementation
+
+- [ ] Study CMC specification (RFC 5272, 5273, 5274)
+- [ ] Implement full CMC PKIData structure (`src/types/cmc_full.rs`)
+- [ ] Implement all CMC control attributes
+- [ ] Implement CMC certificate request formats
+- [ ] Implement CMC response parsing with all status types
+- [ ] Implement CMC batch operations
+- [ ] Create comprehensive CMC example (`examples/cmc_advanced.rs`)
+- [ ] Document full CMC usage in `docs/operations.md`
+
+#### 10.2.7 Certificate Chain Validation
+
+- [ ] Create certificate validation module (`src/validation/mod.rs`)
+- [ ] Implement chain building from issued certificate to root
+- [ ] Implement path validation (RFC 5280)
+- [ ] Implement name constraints checking
+- [ ] Implement policy constraints checking
+- [ ] Add validation hooks to enrollment responses
+- [ ] Create validation example (`examples/validate_chain.rs`)
+- [ ] Document validation in `docs/security.md`
+
+#### 10.2.8 SCEP Protocol Support
+
+- [ ] Research SCEP protocol (RFC 8894)
+- [ ] Evaluate feasibility of combined EST+SCEP client
+- [ ] Design SCEP client API (`src/scep/mod.rs`)
+- [ ] Implement SCEP GetCACert operation
+- [ ] Implement SCEP PKIOperation
+- [ ] Implement SCEP message signing and encryption
+- [ ] Add `scep` feature flag to `Cargo.toml`
+- [ ] Create SCEP example (`examples/scep_enroll.rs`)
+- [ ] Document SCEP vs EST comparison in docs
+
+#### 10.2.9 Metrics and Monitoring
+
+- [ ] Design metrics collection API (`src/metrics.rs`)
+- [ ] Add operation counters (enrollments, renewals, errors)
+- [ ] Add operation duration histograms
+- [ ] Add TLS handshake metrics
+- [ ] Integrate with common metrics libraries (prometheus, opentelemetry)
+- [ ] Add `metrics` feature flag to `Cargo.toml`
+- [ ] Create metrics example (`examples/metrics.rs`)
+- [ ] Document metrics in `docs/operations.md`
+
+---
+
+### 10.3 Platform Support Expansion
+
+#### 10.3.1 WASM Support Investigation
+
+- [ ] Research rustls WASM compatibility
+- [ ] Research reqwest WASM compatibility
+- [ ] Identify WASM-incompatible dependencies
+- [ ] Create WASM compatibility matrix document
+- [ ] Evaluate alternative HTTP clients for WASM (web-sys fetch)
+- [ ] Create proof-of-concept WASM build
+- [ ] Document WASM limitations and workarounds
+- [ ] Add WASM example if feasible
+
+#### 10.3.2 Embedded/no_std Support Investigation
+
+- [ ] Audit dependencies for no_std compatibility
+- [ ] Identify std-only features in current implementation
+- [ ] Research embedded HTTP client options (reqwless, embedded-nal)
+- [ ] Research embedded TLS options (embedded-tls, rustls-nostd)
+- [ ] Design conditional compilation strategy for no_std
+- [ ] Create proof-of-concept no_std build
+- [ ] Document no_std limitations and requirements
+- [ ] Add embedded example if feasible
+
+#### 10.3.3 Platform-Specific Optimizations
+
+- [ ] Investigate platform-specific TLS backends
+- [ ] Evaluate OpenSSL backend option for Linux
+- [ ] Evaluate Security framework integration for macOS
+- [ ] Evaluate CNG integration for Windows
+- [ ] Add optional platform-specific features to `Cargo.toml`
+- [ ] Document platform-specific configurations
 
 ---
 
