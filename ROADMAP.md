@@ -11,11 +11,13 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 ## Phase 1: Foundation ✅ COMPLETE
 
 ### 1.1 Project Setup
-- [x] Create `Cargo.toml` with dependencies
-- [x] Create directory structure (`src/`, `src/operations/`, `src/types/`, `examples/`)
+
+- ✅ Create `Cargo.toml` with dependencies
+- ✅ Create directory structure (`src/`, `src/operations/`, `src/types/`, `examples/`)
 
 ### 1.2 Error Handling (`src/error.rs`)
-- [x] Define `EstError` enum with all variants:
+
+- ✅ Define `EstError` enum with all variants:
   - `TlsConfig` - TLS configuration errors
   - `Http` - HTTP request failures
   - `InvalidContentType` - Response content-type mismatches
@@ -32,167 +34,183 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
   - `MissingHeader` - Required header missing
   - `InvalidMultipart` - Multipart parsing errors
   - `NotSupported` - Operation not supported by server
-- [x] Define `Result<T>` type alias
-- [x] Helper constructors for all error types
-- [x] `is_retryable()` and `retry_after()` methods
+- ✅ Define `Result<T>` type alias
+- ✅ Helper constructors for all error types
+- ✅ `is_retryable()` and `retry_after()` methods
 
 ### 1.3 Configuration (`src/config.rs`)
-- [x] `EstClientConfig` struct with all fields
-- [x] `ClientIdentity` struct (PEM cert chain + key)
-- [x] `HttpAuth` struct (username + password)
-- [x] `TrustAnchors` enum (WebPki, Explicit, Bootstrap)
-- [x] `BootstrapConfig` with fingerprint verification callback
-- [x] Builder pattern for `EstClientConfig`
-- [x] URL building with optional CA label support
+
+- ✅ `EstClientConfig` struct with all fields
+- ✅ `ClientIdentity` struct (PEM cert chain + key)
+- ✅ `HttpAuth` struct (username + password)
+- ✅ `TrustAnchors` enum (WebPki, Explicit, Bootstrap)
+- ✅ `BootstrapConfig` with fingerprint verification callback
+- ✅ Builder pattern for `EstClientConfig`
+- ✅ URL building with optional CA label support
 
 ### 1.4 TLS Configuration (`src/tls.rs`)
-- [x] Build `rustls::ClientConfig` from `EstClientConfig`
-- [x] Configure TLS 1.2+ minimum version
-- [x] Load client certificate and key from PEM
-- [x] Configure trust anchors (webpki-roots or explicit)
-- [x] Build `reqwest::Client` with TLS config
+
+- ✅ Build `rustls::ClientConfig` from `EstClientConfig`
+- ✅ Configure TLS 1.2+ minimum version
+- ✅ Load client certificate and key from PEM
+- ✅ Configure trust anchors (webpki-roots or explicit)
+- ✅ Build `reqwest::Client` with TLS config
 
 ---
 
 ## Phase 2: Core Types ✅ COMPLETE
 
 ### 2.1 PKCS#7/CMS Parsing (`src/types/pkcs7.rs`)
-- [x] Parse `application/pkcs7-mime` responses
-- [x] Extract certificates from CMS SignedData (certs-only)
-- [x] Handle base64 Content-Transfer-Encoding
-- [x] Convert to `x509_cert::Certificate` types
-- [x] Helper functions for encoding/decoding
+
+- ✅ Parse `application/pkcs7-mime` responses
+- ✅ Extract certificates from CMS SignedData (certs-only)
+- ✅ Handle base64 Content-Transfer-Encoding
+- ✅ Convert to `x509_cert::Certificate` types
+- ✅ Helper functions for encoding/decoding
 
 ### 2.2 Type Definitions (`src/types/mod.rs`)
-- [x] `CaCertificates` - Collection of CA certificates
-- [x] `EnrollmentResponse` enum (Issued/Pending)
-- [x] `ServerKeygenResponse` - Certificate + private key
-- [x] Content-type and operation constants
-- [x] Re-export `x509_cert::Certificate`
+
+- ✅ `CaCertificates` - Collection of CA certificates
+- ✅ `EnrollmentResponse` enum (Issued/Pending)
+- ✅ `ServerKeygenResponse` - Certificate + private key
+- ✅ Content-type and operation constants
+- ✅ Re-export `x509_cert::Certificate`
 
 ---
 
 ## Phase 3: EST Client Core ✅ COMPLETE
 
 ### 3.1 Client Structure (`src/client.rs`)
-- [x] `EstClient` struct with config and HTTP client
-- [x] `EstClient::new(config)` async constructor
-- [x] `build_url(operation)` helper for well-known paths
-- [x] URL format: `https://{server}/.well-known/est/{ca_label?}/{operation}`
-- [x] HTTP Basic auth header injection when configured
-- [x] Error handling for all response codes
-- [x] Multipart response parsing
+
+- ✅ `EstClient` struct with config and HTTP client
+- ✅ `EstClient::new(config)` async constructor
+- ✅ `build_url(operation)` helper for well-known paths
+- ✅ URL format: `https://{server}/.well-known/est/{ca_label?}/{operation}`
+- ✅ HTTP Basic auth header injection when configured
+- ✅ Error handling for all response codes
+- ✅ Multipart response parsing
 
 ---
 
 ## Phase 4: Mandatory Operations ✅ COMPLETE
 
 ### 4.1 GET /cacerts
-- [x] Make GET request to `/.well-known/est/cacerts`
-- [x] Accept `application/pkcs7-mime` response
-- [x] Base64 decode response body
-- [x] Parse CMS SignedData (certs-only)
-- [x] Return `CaCertificates`
+
+- ✅ Make GET request to `/.well-known/est/cacerts`
+- ✅ Accept `application/pkcs7-mime` response
+- ✅ Base64 decode response body
+- ✅ Parse CMS SignedData (certs-only)
+- ✅ Return `CaCertificates`
 
 ### 4.2 POST /simpleenroll
-- [x] Accept PKCS#10 CSR (DER bytes)
-- [x] Base64 encode CSR body
-- [x] Set `Content-Type: application/pkcs10`
-- [x] POST to `/.well-known/est/simpleenroll`
-- [x] Handle HTTP 200: Parse certificate from PKCS#7
-- [x] Handle HTTP 202: Extract Retry-After, return `Pending`
-- [x] Handle HTTP 401: Return `AuthenticationRequired`
-- [x] Handle 4xx/5xx: Return `ServerError`
+
+- ✅ Accept PKCS#10 CSR (DER bytes)
+- ✅ Base64 encode CSR body
+- ✅ Set `Content-Type: application/pkcs10`
+- ✅ POST to `/.well-known/est/simpleenroll`
+- ✅ Handle HTTP 200: Parse certificate from PKCS#7
+- ✅ Handle HTTP 202: Extract Retry-After, return `Pending`
+- ✅ Handle HTTP 401: Return `AuthenticationRequired`
+- ✅ Handle 4xx/5xx: Return `ServerError`
 
 ### 4.3 POST /simplereenroll
-- [x] Same flow as simpleenroll
-- [x] POST to `/.well-known/est/simplereenroll`
-- [x] Requires existing client certificate for TLS auth
-- [x] Validation helpers for reenrollment
+
+- ✅ Same flow as simpleenroll
+- ✅ POST to `/.well-known/est/simplereenroll`
+- ✅ Requires existing client certificate for TLS auth
+- ✅ Validation helpers for reenrollment
 
 ---
 
 ## Phase 5: Optional Operations ✅ COMPLETE
 
 ### 5.1 CSR Attributes
-- [x] `CsrAttributes` struct (`src/types/csr_attrs.rs`)
-- [x] Parse `application/csrattrs` response (ASN.1 sequence)
-- [x] GET request to `/.well-known/est/csrattrs`
-- [x] Handle HTTP 404/501 (not implemented)
-- [x] Well-known OID constants
-- [x] Helper methods (`contains_oid`, `oids()`)
+
+- ✅ `CsrAttributes` struct (`src/types/csr_attrs.rs`)
+- ✅ Parse `application/csrattrs` response (ASN.1 sequence)
+- ✅ GET request to `/.well-known/est/csrattrs`
+- ✅ Handle HTTP 404/501 (not implemented)
+- ✅ Well-known OID constants
+- ✅ Helper methods (`contains_oid`, `oids()`)
 
 ### 5.2 Server Key Generation
-- [x] `ServerKeygenResponse` struct (cert + private key)
-- [x] POST to `/.well-known/est/serverkeygen`
-- [x] Parse `multipart/mixed` response
-- [x] Handle private key parts (PKCS#8)
-- [x] Detect encrypted private keys (CMS EnvelopedData)
-- [x] PEM conversion helpers
+
+- ✅ `ServerKeygenResponse` struct (cert + private key)
+- ✅ POST to `/.well-known/est/serverkeygen`
+- ✅ Parse `multipart/mixed` response
+- ✅ Handle private key parts (PKCS#8)
+- ✅ Detect encrypted private keys (CMS EnvelopedData)
+- ✅ PEM conversion helpers
 
 ### 5.3 Full CMC
-- [x] `CmcRequest` struct (PKIData) (`src/types/cmc.rs`)
-- [x] `CmcResponse` struct (ResponseBody)
-- [x] `CmcStatus` enum with status codes
-- [x] POST `application/pkcs7-mime; smime-type=CMC-request`
-- [x] Parse CMC response
-- [x] CMC control attribute OID constants
+
+- ✅ `CmcRequest` struct (PKIData) (`src/types/cmc.rs`)
+- ✅ `CmcResponse` struct (ResponseBody)
+- ✅ `CmcStatus` enum with status codes
+- ✅ POST `application/pkcs7-mime; smime-type=CMC-request`
+- ✅ Parse CMC response
+- ✅ CMC control attribute OID constants
 
 ---
 
 ## Phase 6: CSR Generation ✅ COMPLETE
 
 ### 6.1 CSR Builder (`src/csr.rs`)
-- [x] Feature gate: `#[cfg(feature = "csr-gen")]`
-- [x] `CsrBuilder` struct with builder pattern
-- [x] Subject DN fields: CN, O, OU, C, ST, L
-- [x] Subject Alternative Names: DNS, IP, Email, URI
-- [x] Key usage and extended key usage
-- [x] `with_attributes(CsrAttributes)` to apply server requirements
-- [x] `build()` - Generate new ECDSA P-256 key pair + CSR
-- [x] `build_with_key(KeyPair)` - Use existing key
-- [x] Return DER-encoded CSR bytes
-- [x] Helper functions: `generate_device_csr()`, `generate_server_csr()`
+
+- ✅ Feature gate: `#[cfg(feature = "csr-gen")]`
+- ✅ `CsrBuilder` struct with builder pattern
+- ✅ Subject DN fields: CN, O, OU, C, ST, L
+- ✅ Subject Alternative Names: DNS, IP, Email, URI
+- ✅ Key usage and extended key usage
+- ✅ `with_attributes(CsrAttributes)` to apply server requirements
+- ✅ `build()` - Generate new ECDSA P-256 key pair + CSR
+- ✅ `build_with_key(KeyPair)` - Use existing key
+- ✅ Return DER-encoded CSR bytes
+- ✅ Helper functions: `generate_device_csr()`, `generate_server_csr()`
 
 ---
 
 ## Phase 7: Bootstrap/TOFU Mode ✅ COMPLETE
 
 ### 7.1 Bootstrap Client (`src/bootstrap.rs`)
-- [x] `BootstrapClient` struct (server URL + CA label)
-- [x] Disable TLS server verification
-- [x] `fetch_ca_certs()` - Get CA certs without trust
-- [x] Compute SHA-256 fingerprints
-- [x] `format_fingerprint([u8; 32])` - "AB:CD:EF:..." format
-- [x] `parse_fingerprint(str)` - Parse hex fingerprint
-- [x] `get_subject_cn()` - Extract CN from certificate
-- [x] User verification callback integration
+
+- ✅ `BootstrapClient` struct (server URL + CA label)
+- ✅ Disable TLS server verification
+- ✅ `fetch_ca_certs()` - Get CA certs without trust
+- ✅ Compute SHA-256 fingerprints
+- ✅ `format_fingerprint([u8; 32])` - "AB:CD:EF:..." format
+- ✅ `parse_fingerprint(str)` - Parse hex fingerprint
+- ✅ `get_subject_cn()` - Extract CN from certificate
+- ✅ User verification callback integration
 
 ---
 
 ## Phase 8: Integration ✅ COMPLETE
 
 ### 8.1 Library Exports (`src/lib.rs`)
-- [x] Re-export public types
-- [x] Re-export `EstClient`
-- [x] Re-export `EstClientConfig` and related
-- [x] Feature-gated CSR builder exports
-- [x] Module documentation
-- [x] Version constant
+
+- ✅ Re-export public types
+- ✅ Re-export `EstClient`
+- ✅ Re-export `EstClientConfig` and related
+- ✅ Feature-gated CSR builder exports
+- ✅ Module documentation
+- ✅ Version constant
 
 ### 8.2 Examples (`examples/`)
-- [x] `simple_enroll.rs` - Basic enrollment flow
-- [x] `reenroll.rs` - Certificate renewal
-- [x] `bootstrap.rs` - TOFU CA discovery
+
+- ✅ `simple_enroll.rs` - Basic enrollment flow
+- ✅ `reenroll.rs` - Certificate renewal
+- ✅ `bootstrap.rs` - TOFU CA discovery
 
 ### 8.3 Testing
-- [x] Unit tests for PKCS#7 parsing
-- [x] Unit tests for CSR attributes parsing
-- [x] Unit tests for all operations helpers
-- [x] Unit tests for error handling
-- [x] Unit tests for configuration
-- [x] Unit tests for CSR building
-- [x] 39 unit tests total
+
+- ✅ Unit tests for PKCS#7 parsing
+- ✅ Unit tests for CSR attributes parsing
+- ✅ Unit tests for all operations helpers
+- ✅ Unit tests for error handling
+- ✅ Unit tests for configuration
+- ✅ Unit tests for CSR building
+- ✅ 39 unit tests total
 - [ ] Integration tests with wiremock ⚠️ TODO
 
 ---
@@ -200,25 +218,28 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 ## Phase 9: Documentation ✅ COMPLETE
 
 ### 9.1 Comprehensive Documentation
-- [x] `docs/README.md` - Overview and quick start
-- [x] `docs/getting-started.md` - Installation and basic usage
-- [x] `docs/operations.md` - Detailed EST operations guide
-- [x] `docs/configuration.md` - Configuration reference
-- [x] `docs/security.md` - Security best practices
-- [x] `docs/api-reference.md` - Complete API documentation
-- [x] `docs/examples.md` - Usage examples and patterns
+
+- ✅ `docs/README.md` - Overview and quick start
+- ✅ `docs/getting-started.md` - Installation and basic usage
+- ✅ `docs/operations.md` - Detailed EST operations guide
+- ✅ `docs/configuration.md` - Configuration reference
+- ✅ `docs/security.md` - Security best practices
+- ✅ `docs/api-reference.md` - Complete API documentation
+- ✅ `docs/examples.md` - Usage examples and patterns
 
 ### 9.2 Code Quality
-- [x] All clippy warnings fixed
-- [x] All 39 unit tests passing
-- [x] Code formatted with rustfmt
-- [x] Comprehensive inline documentation
+
+- ✅ All clippy warnings fixed
+- ✅ All 39 unit tests passing
+- ✅ Code formatted with rustfmt
+- ✅ Comprehensive inline documentation
 
 ---
 
 ## Phase 10: Future Enhancements 🔄 IN PROGRESS
 
 ### 10.1 Testing Improvements
+
 - [ ] **Integration tests with wiremock** - Mock HTTP server tests
 - [ ] **Fixtures** - Sample EST responses (PKCS#7, multipart, CMC)
 - [ ] **Error scenario tests** - HTTP errors, invalid responses
@@ -226,6 +247,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - [ ] **Target: 70-80% code coverage** (currently 26.21%)
 
 ### 10.2 Advanced Features (Future)
+
 - [ ] Automatic certificate renewal scheduling
 - [ ] Certificate revocation support (CRL/OCSP)
 - [ ] Hardware security module (HSM) integration
@@ -237,9 +259,10 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - [ ] Metrics and monitoring integration
 
 ### 10.3 Platform Support
-- [x] macOS support
-- [x] Linux support
-- [x] Windows support (via rustls)
+
+- ✅ macOS support
+- ✅ Linux support
+- ✅ Windows support (via rustls)
 - [ ] WASM support (investigate feasibility)
 - [ ] Embedded/no_std support (investigate feasibility)
 
@@ -269,6 +292,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 ## Current Status Summary
 
 ### ✅ Completed
+
 - **Core implementation**: All EST operations implemented
 - **RFC 7030 compliance**: Fully compliant with mandatory and optional operations
 - **Error handling**: Comprehensive error types and handling
@@ -281,10 +305,12 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - **Tests**: 39 unit tests covering core functionality
 
 ### 🔄 In Progress
+
 - **Integration tests**: Need mock server tests for HTTP operations
 - **Code coverage**: 26.21% → target 70-80%
 
 ### 📊 Metrics
+
 - **Lines of Code**: ~885 lines (library)
 - **Test Coverage**: 26.21% (232/885 lines)
 - **Unit Tests**: 39 passing
@@ -332,6 +358,7 @@ See [docs/](docs/) for complete documentation.
 See coverage report in [coverage/coverage_summary.md](coverage/coverage_summary.md) for areas needing improvement.
 
 Priority areas:
+
 1. Integration tests with wiremock
 2. Error handling tests
 3. Response parsing tests with fixtures
