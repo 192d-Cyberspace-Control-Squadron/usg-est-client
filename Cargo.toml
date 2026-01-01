@@ -2,7 +2,7 @@
 name = "usg-est-client"
 version = "0.1.0"
 edition = "2021"
-license = "AGPL-3.0"
+license = "Apache-2.0"
 description = "RFC 7030 compliant EST (Enrollment over Secure Transport) client"
 keywords = ["est", "pki", "certificate", "enrollment", "rfc7030"]
 categories = ["cryptography", "network-programming"]
