@@ -382,15 +382,17 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ⚠️  Create revocation example (`examples/check_revocation.rs`) - TODO
 - ⚠️  Document revocation checking in `docs/security.md` - TODO
 
-#### 10.2.3 Hardware Security Module (HSM) Integration
+#### 10.2.3 Hardware Security Module (HSM) Integration ✅ COMPLETE (Core Implementation)
 
-- [ ] Research HSM integration patterns in Rust
-- [ ] Design HSM key provider trait (`src/hsm/mod.rs`)
-- [ ] Implement HSM-backed private key signing interface
-- [ ] Implement HSM-backed CSR generation
-- [ ] Add `hsm` feature flag to `Cargo.toml`
-- [ ] Create HSM example (`examples/hsm_enroll.rs`)
-- [ ] Document HSM usage in `docs/configuration.md`
+- ✅ Research HSM integration patterns in Rust
+- ✅ Design HSM key provider trait (`src/hsm/mod.rs`)
+- ✅ Implement KeyProvider trait with async operations
+- ✅ Implement SoftwareKeyProvider for in-memory keys
+- ✅ Add KeyHandle, KeyAlgorithm, and KeyMetadata types
+- ✅ Add `hsm` feature flag to `Cargo.toml`
+- ⚠️  Implement HSM-backed CSR generation (needs CsrBuilder integration) - TODO
+- ⚠️  Create HSM example (`examples/hsm_enroll.rs`) - TODO
+- ⚠️  Document HSM usage in `docs/configuration.md` - TODO
 
 #### 10.2.4 PKCS#11 Support
 
