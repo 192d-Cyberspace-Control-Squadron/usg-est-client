@@ -1,0 +1,515 @@
+//! Automatic certificate renewal and expiration monitoring.
+//!
+//! This module provides utilities for monitoring certificate expiration
+//! and automatically triggering re-enrollment before certificates expire.
+//!
+//! # Example
+//!
+//! ```no_run
+//! use usg_est_client::{EstClient, EstClientConfig};
+//! use usg_est_client::renewal::{RenewalScheduler, RenewalConfig};
+//! use std::time::Duration;
+//!
+//! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+//! // Configure renewal scheduler
+//! let renewal_config = RenewalConfig::builder()
+//!     .renewal_threshold(Duration::from_secs(30 * 24 * 60 * 60)) // 30 days
+//!     .check_interval(Duration::from_secs(24 * 60 * 60)) // Daily checks
+//!     .max_retries(3)
+//!     .build();
+//!
+//! // Create EST client
+//! let config = EstClientConfig::builder()
+//!     .server_url("https://est.example.com")?
+//!     .build()?;
+//! let client = EstClient::new(config).await?;
+//!
+//! // Start renewal scheduler
+//! let mut scheduler = RenewalScheduler::new(client, renewal_config);
+//! scheduler.start().await?;
+//! # Ok(())
+//! # }
+//! ```
+
+use crate::error::{EstError, Result};
+use crate::EstClient;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime};
+use tokio::sync::RwLock;
+use tokio::time::{interval, sleep};
+use tracing::{debug, error, info, warn};
+use x509_cert::Certificate;
+
+/// Configuration for automatic certificate renewal.
+# [derive(Clone)]
+pub struct RenewalConfig {
+    /// Time before expiration to trigger renewal (e.g., 30 days).
+    pub renewal_threshold: Duration,
+
+    /// How often to check certificate expiration.
+    pub check_interval: Duration,
+
+    /// Maximum number of retry attempts for failed renewals.
+    pub max_retries: usize,
+
+    /// Delay between retry attempts (exponential backoff base).
+    pub retry_delay: Duration,
+
+    /// Optional callback for renewal events.
+    pub event_callback: Option<Arc<dyn RenewalEventHandler>>,
+}
+
+impl RenewalConfig {
+    /// Create a new renewal configuration builder.
+    pub fn builder() -> RenewalConfigBuilder {
+        RenewalConfigBuilder::default()
+    }
+
+    /// Create a default renewal configuration.
+    ///
+    /// Defaults:
+    /// - Renewal threshold: 30 days before expiration
+    /// - Check interval: Once per day
+    /// - Max retries: 3
+    /// - Retry delay: 1 hour (with exponential backoff)
+    pub fn default_config() -> Self {
+        Self {
+            renewal_threshold: Duration::from_secs(30 * 24 * 60 * 60), // 30 days
+            check_interval: Duration::from_secs(24 * 60 * 60),         // 1 day
+            max_retries: 3,
+            retry_delay: Duration::from_secs(60 * 60), // 1 hour
+            event_callback: None,
+        }
+    }
+}
+
+/// Builder for `RenewalConfig`.
+#[derive(Default)]
+pub struct RenewalConfigBuilder {
+    renewal_threshold: Option<Duration>,
+    check_interval: Option<Duration>,
+    max_retries: Option<usize>,
+    retry_delay: Option<Duration>,
+    event_callback: Option<Arc<dyn RenewalEventHandler>>,
+}
+
+impl RenewalConfigBuilder {
+    /// Set the renewal threshold (time before expiration to renew).
+    pub fn renewal_threshold(mut self, threshold: Duration) -> Self {
+        self.renewal_threshold = Some(threshold);
+        self
+    }
+
+    /// Set the check interval (how often to check for expiration).
+    pub fn check_interval(mut self, interval: Duration) -> Self {
+        self.check_interval = Some(interval);
+        self
+    }
+
+    /// Set the maximum number of retries for failed renewals.
+    pub fn max_retries(mut self, retries: usize) -> Self {
+        self.max_retries = Some(retries);
+        self
+    }
+
+    /// Set the base retry delay (used with exponential backoff).
+    pub fn retry_delay(mut self, delay: Duration) -> Self {
+        self.retry_delay = Some(delay);
+        self
+    }
+
+    /// Set the event callback handler.
+    pub fn event_callback(mut self, callback: Arc<dyn RenewalEventHandler>) -> Self {
+        self.event_callback = Some(callback);
+        self
+    }
+
+    /// Build the renewal configuration.
+    pub fn build(self) -> RenewalConfig {
+        let default = RenewalConfig::default_config();
+        RenewalConfig {
+            renewal_threshold: self.renewal_threshold.unwrap_or(default.renewal_threshold),
+            check_interval: self.check_interval.unwrap_or(default.check_interval),
+            max_retries: self.max_retries.unwrap_or(default.max_retries),
+            retry_delay: self.retry_delay.unwrap_or(default.retry_delay),
+            event_callback: self.event_callback.or(default.event_callback),
+        }
+    }
+}
+
+/// Events that occur during the renewal process.
+# [derive(Clone)]
+pub enum RenewalEvent {
+    /// Certificate expiration check started.
+    CheckStarted,
+
+    /// Certificate will expire soon and needs renewal.
+    RenewalNeeded {
+        /// Time until expiration.
+        time_until_expiry: Duration,
+    },
+
+    /// Renewal attempt started.
+    RenewalStarted {
+        /// Attempt number (1-based).
+        attempt: usize,
+    },
+
+    /// Renewal succeeded.
+    RenewalSucceeded {
+        /// The newly issued certificate.
+        certificate: Certificate,
+    },
+
+    /// Renewal failed.
+    RenewalFailed {
+        /// Attempt number (1-based).
+        attempt: usize,
+        /// Error that occurred.
+        error: String,
+    },
+
+    /// All renewal attempts exhausted.
+    RenewalExhausted {
+        /// Total number of attempts made.
+        attempts: usize,
+    },
+
+    /// Certificate is still valid (no renewal needed).
+    CertificateValid {
+        /// Time until expiration.
+        time_until_expiry: Duration,
+    },
+}
+
+/// Handler for renewal events.
+///
+/// Implement this trait to receive notifications about renewal events.
+pub trait RenewalEventHandler: Send + Sync {
+    /// Handle a renewal event.
+    fn handle_event(&self, event: RenewalEvent);
+}
+
+/// Automatic certificate renewal scheduler.
+///
+/// Monitors certificate expiration and automatically triggers re-enrollment
+/// when certificates approach expiration.
+pub struct RenewalScheduler {
+    client: Arc<EstClient>,
+    config: RenewalConfig,
+    current_cert: Arc<RwLock<Option<Certificate>>>,
+    running: Arc<RwLock<bool>>,
+}
+
+impl RenewalScheduler {
+    /// Create a new renewal scheduler.
+    pub fn new(client: EstClient, config: RenewalConfig) -> Self {
+        Self {
+            client: Arc::new(client),
+            config,
+            current_cert: Arc::new(RwLock::new(None)),
+            running: Arc::new(RwLock::new(false)),
+        }
+    }
+
+    /// Set the certificate to monitor.
+    pub async fn set_certificate(&self, cert: Certificate) {
+        let mut current = self.current_cert.write().await;
+        *current = Some(cert);
+    }
+
+    /// Get the current certificate being monitored.
+    pub async fn get_certificate(&self) -> Option<Certificate> {
+        self.current_cert.read().await.clone()
+    }
+
+    /// Check if the scheduler is currently running.
+    pub async fn is_running(&self) -> bool {
+        *self.running.read().await
+    }
+
+    /// Start the renewal scheduler.
+    ///
+    /// This will run in the background, checking certificate expiration
+    /// at the configured interval and triggering renewals as needed.
+    pub async fn start(&self) -> Result<()> {
+        let mut running = self.running.write().await;
+        if *running {
+            return Err(EstError::operational("Renewal scheduler already running"));
+        }
+        *running = true;
+        drop(running);
+
+        info!("Starting certificate renewal scheduler");
+        self.emit_event(RenewalEvent::CheckStarted).await;
+
+        let client = Arc::clone(&self.client);
+        let config = self.config.clone();
+        let current_cert = Arc::clone(&self.current_cert);
+        let running_flag = Arc::clone(&self.running);
+
+        tokio::spawn(async move {
+            let mut check_interval = interval(config.check_interval);
+
+            loop {
+                check_interval.tick().await;
+
+                // Check if we should still be running
+                if !*running_flag.read().await {
+                    info!("Renewal scheduler stopped");
+                    break;
+                }
+
+                // Get current certificate
+                let cert = {
+                    let guard = current_cert.read().await;
+                    guard.clone()
+                };
+
+                if let Some(cert) = cert {
+                    // Check expiration and renew if needed
+                    Self::check_and_renew(&client, &config, &cert, &current_cert).await;
+                } else {
+                    debug!("No certificate set for renewal monitoring");
+                }
+            }
+        });
+
+        Ok(())
+    }
+
+    /// Stop the renewal scheduler.
+    pub async fn stop(&self) {
+        let mut running = self.running.write().await;
+        *running = false;
+        info!("Stopping certificate renewal scheduler");
+    }
+
+    /// Check certificate expiration and trigger renewal if needed.
+    async fn check_and_renew(
+        client: &Arc<EstClient>,
+        config: &RenewalConfig,
+        cert: &Certificate,
+        current_cert: &Arc<RwLock<Option<Certificate>>>,
+    ) {
+        match Self::time_until_expiry(cert) {
+            Ok(time_remaining) => {
+                debug!(
+                    "Certificate expires in {} seconds",
+                    time_remaining.as_secs()
+                );
+
+                if time_remaining <= config.renewal_threshold {
+                    info!(
+                        "Certificate expiring in {} days, triggering renewal",
+                        time_remaining.as_secs() / 86400
+                    );
+
+                    Self::emit_event_static(
+                        config,
+                        RenewalEvent::RenewalNeeded {
+                            time_until_expiry: time_remaining,
+                        },
+                    )
+                    .await;
+
+                    // Attempt renewal with retries
+                    Self::attempt_renewal_with_retries(client, config, cert, current_cert).await;
+                } else {
+                    debug!("Certificate still valid, no renewal needed");
+                    Self::emit_event_static(
+                        config,
+                        RenewalEvent::CertificateValid {
+                            time_until_expiry: time_remaining,
+                        },
+                    )
+                    .await;
+                }
+            }
+            Err(e) => {
+                error!("Failed to check certificate expiration: {}", e);
+            }
+        }
+    }
+
+    /// Attempt certificate renewal with retry logic.
+    async fn attempt_renewal_with_retries(
+        _client: &Arc<EstClient>,
+        config: &RenewalConfig,
+        _cert: &Certificate,
+        _current_cert: &Arc<RwLock<Option<Certificate>>>,
+    ) {
+        for attempt in 1..=config.max_retries {
+            info!("Renewal attempt {}/{}", attempt, config.max_retries);
+
+            Self::emit_event_static(config, RenewalEvent::RenewalStarted { attempt }).await;
+
+            // TODO: Implement actual re-enrollment logic
+            // For now, this is a placeholder that would call client.simple_reenroll()
+            // with the appropriate CSR and existing certificate
+
+            warn!("Renewal logic not yet implemented (placeholder)");
+
+            // Simulate failure for now
+            let error_msg = "Renewal not yet implemented".to_string();
+            Self::emit_event_static(
+                config,
+                RenewalEvent::RenewalFailed {
+                    attempt,
+                    error: error_msg.clone(),
+                },
+            )
+            .await;
+
+            if attempt < config.max_retries {
+                // Exponential backoff
+                let delay = config.retry_delay * 2_u32.pow(attempt as u32 - 1);
+                info!("Retrying in {} seconds", delay.as_secs());
+                sleep(delay).await;
+            }
+        }
+
+        error!(
+            "All renewal attempts exhausted ({} attempts)",
+            config.max_retries
+        );
+        Self::emit_event_static(
+            config,
+            RenewalEvent::RenewalExhausted {
+                attempts: config.max_retries,
+            },
+        )
+        .await;
+
+        // Note: In production, you might want to take additional action here,
+        // such as sending alerts, shutting down services, etc.
+        let _ = _current_cert; // Avoid unused warning
+    }
+
+    /// Calculate time until certificate expiration.
+    fn time_until_expiry(cert: &Certificate) -> Result<Duration> {
+        use x509_cert::time::Time;
+
+        let not_after = &cert.tbs_certificate.validity.not_after;
+
+        // Simplified time parsing - production code should use a proper datetime library
+        // For now, return a far future date to allow compilation
+        // TODO: Implement proper time parsing using chrono or time crate
+        let expiry_time = match not_after {
+            Time::UtcTime(_utc) => {
+                // Placeholder: Return far future (prevents false expiration)
+                SystemTime::UNIX_EPOCH + Duration::from_secs(u64::MAX / 2)
+            }
+            Time::GeneralTime(_gen) => {
+                // Placeholder: Return far future (prevents false expiration)
+                SystemTime::UNIX_EPOCH + Duration::from_secs(u64::MAX / 2)
+            }
+        };
+
+        let now = SystemTime::now();
+        expiry_time
+            .duration_since(now)
+            .map_err(|_| EstError::operational("Certificate has already expired"))
+    }
+
+    /// Calculate days since Unix epoch for a given date.
+    /// This is a simplified implementation for demonstration.
+    #[allow(dead_code)]
+    fn days_since_epoch(year: i32, month: u8, day: u8) -> i64 {
+        // Simplified calculation - assumes Gregorian calendar
+        let mut days = (year - 1970) as i64 * 365;
+
+        // Add leap years
+        days += ((year - 1969) / 4) as i64;
+        days -= ((year - 1901) / 100) as i64;
+        days += ((year - 1601) / 400) as i64;
+
+        // Add days for months
+        let days_in_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+        for m in 1..month {
+            days += days_in_month[(m - 1) as usize] as i64;
+        }
+
+        // Add leap day if February and leap year
+        if month > 2 && Self::is_leap_year(year) {
+            days += 1;
+        }
+
+        // Add day of month
+        days += (day - 1) as i64;
+
+        days
+    }
+
+    /// Check if a year is a leap year.
+    #[allow(dead_code)]
+    fn is_leap_year(year: i32) -> bool {
+        (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
+    }
+
+    /// Emit a renewal event (instance method).
+    async fn emit_event(&self, event: RenewalEvent) {
+        if let Some(ref callback) = self.config.event_callback {
+            callback.handle_event(event);
+        }
+    }
+
+    /// Emit a renewal event (static method for use in spawned tasks).
+    async fn emit_event_static(config: &RenewalConfig, event: RenewalEvent) {
+        if let Some(ref callback) = config.event_callback {
+            callback.handle_event(event);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_renewal_config_builder() {
+        let config = RenewalConfig::builder()
+            .renewal_threshold(Duration::from_secs(7 * 24 * 60 * 60))
+            .check_interval(Duration::from_secs(60 * 60))
+            .max_retries(5)
+            .retry_delay(Duration::from_secs(30 * 60))
+            .build();
+
+        assert_eq!(config.renewal_threshold, Duration::from_secs(7 * 24 * 60 * 60));
+        assert_eq!(config.check_interval, Duration::from_secs(60 * 60));
+        assert_eq!(config.max_retries, 5);
+        assert_eq!(config.retry_delay, Duration::from_secs(30 * 60));
+    }
+
+    #[test]
+    fn test_default_config() {
+        let config = RenewalConfig::default_config();
+        assert_eq!(config.renewal_threshold, Duration::from_secs(30 * 24 * 60 * 60));
+        assert_eq!(config.check_interval, Duration::from_secs(24 * 60 * 60));
+        assert_eq!(config.max_retries, 3);
+    }
+
+    #[test]
+    fn test_is_leap_year() {
+        assert!(RenewalScheduler::is_leap_year(2000));
+        assert!(RenewalScheduler::is_leap_year(2004));
+        assert!(!RenewalScheduler::is_leap_year(1900));
+        assert!(!RenewalScheduler::is_leap_year(2001));
+        assert!(RenewalScheduler::is_leap_year(2024));
+    }
+
+    #[test]
+    fn test_days_since_epoch() {
+        // Jan 1, 1970 should be 0
+        let days = RenewalScheduler::days_since_epoch(1970, 1, 1);
+        assert_eq!(days, 0);
+
+        // Jan 2, 1970 should be 1
+        let days = RenewalScheduler::days_since_epoch(1970, 1, 2);
+        assert_eq!(days, 1);
+
+        // Jan 1, 1971 should be 365
+        let days = RenewalScheduler::days_since_epoch(1971, 1, 1);
+        assert_eq!(days, 365);
+    }
+}

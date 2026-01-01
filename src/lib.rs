@@ -130,6 +130,15 @@ pub mod types;
 #[cfg(feature = "csr-gen")]
 pub mod csr;
 
+#[cfg(feature = "renewal")]
+pub mod renewal;
+
+#[cfg(feature = "validation")]
+pub mod validation;
+
+#[cfg(feature = "metrics")]
+pub mod metrics;
+
 // Re-export main types at crate root for convenience
 pub use client::EstClient;
 pub use config::{

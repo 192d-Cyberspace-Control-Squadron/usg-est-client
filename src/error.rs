@@ -143,6 +143,11 @@ impl EstError {
         }
     }
 
+    /// Create an operational error with the given message.
+    pub fn operational(msg: impl Into<String>) -> Self {
+        Self::NotSupported(msg.into())
+    }
+
     /// Create an invalid content-type error.
     pub fn invalid_content_type(expected: impl Into<String>, actual: impl Into<String>) -> Self {
         Self::InvalidContentType {
