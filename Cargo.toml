@@ -1,0 +1,54 @@
+[package]
+name = "usg-est-client"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0"
+description = "RFC 7030 compliant EST (Enrollment over Secure Transport) client"
+keywords = ["est", "pki", "certificate", "enrollment", "rfc7030"]
+categories = ["cryptography", "network-programming"]
+repository = "https://github.com/johnwillman/usg-est-client"
+readme = "README.md"
+
+[dependencies]
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
+
+# HTTP client
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-manual-roots"] }
+
+# TLS
+rustls = "0.23"
+rustls-pemfile = "2"
+webpki-roots = "0.26"
+
+# Cryptography - RustCrypto ecosystem
+x509-cert = "0.2"
+der = { version = "0.7", features = ["alloc", "pem"] }
+cms = "0.2"
+pkcs8 = { version = "0.10", features = ["encryption", "pem"] }
+spki = "0.7"
+const-oid = "0.9"
+sha2 = "0.10"
+
+# CSR generation (optional feature)
+rcgen = { version = "0.13", optional = true }
+
+# Encoding
+base64 = "0.22"
+
+# Error handling
+thiserror = "2"
+
+# URL handling
+url = "2.5"
+
+# Logging
+tracing = "0.1"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
+wiremock = "0.6"
+
+[features]
+default = ["csr-gen"]
+csr-gen = ["rcgen"]
