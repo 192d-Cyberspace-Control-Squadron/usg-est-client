@@ -12,6 +12,7 @@ readme = "README.md"
 [dependencies]
 # Async runtime
 tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
+async-trait = "0.1"
 
 # HTTP client
 reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-manual-roots"] }
@@ -19,6 +20,7 @@ reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-
 # TLS
 rustls = "0.23"
 rustls-pemfile = "2"
+rustls-pki-types = "1"
 webpki-roots = "0.26"
 
 # Cryptography - RustCrypto ecosystem
@@ -58,6 +60,7 @@ required-features = ["csr-gen"]
 [features]
 default = ["csr-gen"]
 csr-gen = ["rcgen"]
+hsm = []
 renewal = []
 validation = []
 metrics = []

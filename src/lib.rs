@@ -145,6 +145,9 @@ pub mod types;
 #[cfg(feature = "csr-gen")]
 pub mod csr;
 
+#[cfg(feature = "hsm")]
+pub mod hsm;
+
 #[cfg(feature = "renewal")]
 pub mod renewal;
 
