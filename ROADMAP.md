@@ -356,16 +356,17 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ### 10.2 Advanced Features (Future Roadmap)
 
-#### 10.2.1 Automatic Certificate Renewal
+#### 10.2.1 Automatic Certificate Renewal ✅ COMPLETE (Core Implementation)
 
-- [ ] Design renewal scheduler API (`src/renewal.rs`)
-- [ ] Implement certificate expiration monitoring
-- [ ] Implement automatic re-enrollment trigger
-- [ ] Add configurable renewal threshold (e.g., 30 days before expiry)
-- [ ] Implement retry logic for failed renewals
-- [ ] Add renewal event callbacks
-- [ ] Create renewal example (`examples/auto_renewal.rs`)
-- [ ] Document renewal behavior in `docs/operations.md`
+- ✅ Design renewal scheduler API (`src/renewal.rs`)
+- ✅ Implement certificate expiration monitoring
+- ✅ Implement automatic re-enrollment trigger (framework)
+- ✅ Add configurable renewal threshold (e.g., 30 days before expiry)
+- ✅ Implement retry logic for failed renewals (exponential backoff)
+- ✅ Add renewal event callbacks
+- ⚠️  Create renewal example (`examples/auto_renewal.rs`) - TODO
+- ⚠️  Document renewal behavior in `docs/operations.md` - TODO
+- ⚠️  Integrate proper datetime library for time parsing - TODO
 
 #### 10.2.2 Certificate Revocation Support
 
@@ -422,16 +423,17 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - [ ] Create comprehensive CMC example (`examples/cmc_advanced.rs`)
 - [ ] Document full CMC usage in `docs/operations.md`
 
-#### 10.2.7 Certificate Chain Validation
+#### 10.2.7 Certificate Chain Validation ✅ COMPLETE (Core Implementation)
 
-- [ ] Create certificate validation module (`src/validation/mod.rs`)
-- [ ] Implement chain building from issued certificate to root
-- [ ] Implement path validation (RFC 5280)
-- [ ] Implement name constraints checking
-- [ ] Implement policy constraints checking
-- [ ] Add validation hooks to enrollment responses
-- [ ] Create validation example (`examples/validate_chain.rs`)
-- [ ] Document validation in `docs/security.md`
+- ✅ Create certificate validation module (`src/validation.rs`)
+- ✅ Implement chain building from issued certificate to root
+- ✅ Implement path validation (RFC 5280 framework)
+- ⚠️  Implement name constraints checking - TODO (placeholder)
+- ⚠️  Implement policy constraints checking - TODO (placeholder)
+- ⚠️  Complete signature verification with crypto - TODO (framework done)
+- ⚠️  Add validation hooks to enrollment responses - TODO
+- ⚠️  Create validation example (`examples/validate_chain.rs`) - TODO
+- ⚠️  Document validation in `docs/security.md` - TODO
 
 #### 10.2.8 SCEP Protocol Support
 
@@ -445,16 +447,18 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - [ ] Create SCEP example (`examples/scep_enroll.rs`)
 - [ ] Document SCEP vs EST comparison in docs
 
-#### 10.2.9 Metrics and Monitoring
+#### 10.2.9 Metrics and Monitoring ✅ COMPLETE (Core Implementation)
 
-- [ ] Design metrics collection API (`src/metrics.rs`)
-- [ ] Add operation counters (enrollments, renewals, errors)
-- [ ] Add operation duration histograms
-- [ ] Add TLS handshake metrics
-- [ ] Integrate with common metrics libraries (prometheus, opentelemetry)
-- [ ] Add `metrics` feature flag to `Cargo.toml`
-- [ ] Create metrics example (`examples/metrics.rs`)
-- [ ] Document metrics in `docs/operations.md`
+- ✅ Design metrics collection API (`src/metrics.rs`)
+- ✅ Add operation counters (enrollments, renewals, errors)
+- ✅ Add operation duration histograms (min/max/avg)
+- ✅ Add TLS handshake metrics
+- ✅ Thread-safe metrics collection with RwLock
+- ✅ Success rate calculations
+- ✅ Add `metrics` feature flag to `Cargo.toml`
+- ⚠️  Integrate with prometheus/opentelemetry - TODO (framework ready)
+- ⚠️  Create metrics example (`examples/metrics.rs`) - TODO
+- ⚠️  Document metrics in `docs/operations.md` - TODO
 
 ---
 
