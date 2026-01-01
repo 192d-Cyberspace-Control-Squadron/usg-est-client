@@ -240,58 +240,58 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ### 10.1 Integration Testing Infrastructure
 
-#### 10.1.1 Wiremock Setup (`tests/integration/`)
+#### 10.1.1 Wiremock Setup (`tests/integration/`) ✅ COMPLETE
 
-- [ ] Add wiremock dev dependency to `Cargo.toml`
-- [ ] Create `tests/integration/mod.rs` with common test utilities
-- [ ] Create mock EST server builder helper
-- [ ] Set up TLS certificate fixtures for test server
-- [ ] Create helper functions for common EST response mocks
+- ✅ Add wiremock dev dependency to `Cargo.toml`
+- ✅ Create `tests/integration/mod.rs` with common test utilities
+- ✅ Create mock EST server builder helper
+- ✅ Set up TLS certificate fixtures for test server
+- ✅ Create helper functions for common EST response mocks
 
-#### 10.1.2 Test Fixtures (`tests/fixtures/`)
+#### 10.1.2 Test Fixtures (`tests/fixtures/`) ✅ COMPLETE
 
-- [ ] Create `fixtures/pkcs7/` directory
-- [ ] Add sample PKCS#7 certs-only responses (valid)
-- [ ] Add malformed PKCS#7 responses for error testing
-- [ ] Create `fixtures/multipart/` directory
-- [ ] Add sample multipart/mixed responses for serverkeygen
-- [ ] Add boundary parsing edge cases
-- [ ] Create `fixtures/cmc/` directory
-- [ ] Add sample CMC request/response pairs
-- [ ] Create `fixtures/certs/` directory
-- [ ] Add test CA certificates and chains
-- [ ] Add test client certificates and keys
+- ✅ Create `fixtures/pkcs7/` directory
+- ✅ Add sample PKCS#7 certs-only responses (valid)
+- ✅ Add malformed PKCS#7 responses for error testing
+- ✅ Create `fixtures/multipart/` directory
+- ✅ Add sample multipart/mixed responses for serverkeygen
+- ✅ Add boundary parsing edge cases
+- ✅ Create `fixtures/cmc/` directory
+- ⚠️  Add sample CMC request/response pairs (basic structure only)
+- ✅ Create `fixtures/certs/` directory
+- ✅ Add test CA certificates and chains
+- ✅ Add test client certificates and keys
 
-#### 10.1.3 Operation Tests (`tests/integration/operations/`)
+#### 10.1.3 Operation Tests (`tests/integration/operations/`) ✅ COMPLETE
 
-- [ ] Create `tests/integration/operations/cacerts_test.rs`
-  - [ ] Test successful CA certs retrieval
-  - [ ] Test invalid content-type handling
-  - [ ] Test malformed PKCS#7 response
-  - [ ] Test empty certificate list
-- [ ] Create `tests/integration/operations/enroll_test.rs`
-  - [ ] Test successful enrollment (HTTP 200)
-  - [ ] Test pending enrollment (HTTP 202 + Retry-After)
-  - [ ] Test authentication required (HTTP 401)
-  - [ ] Test server error (HTTP 500)
-  - [ ] Test CSR validation
-- [ ] Create `tests/integration/operations/reenroll_test.rs`
-  - [ ] Test successful re-enrollment
-  - [ ] Test missing client certificate
-  - [ ] Test expired certificate handling
-- [ ] Create `tests/integration/operations/csrattrs_test.rs`
-  - [ ] Test successful CSR attributes retrieval
-  - [ ] Test HTTP 404 (not supported)
-  - [ ] Test malformed attributes response
-- [ ] Create `tests/integration/operations/serverkeygen_test.rs`
-  - [ ] Test successful server keygen
-  - [ ] Test multipart response parsing
-  - [ ] Test encrypted vs unencrypted keys
-  - [ ] Test malformed multipart response
-- [ ] Create `tests/integration/operations/fullcmc_test.rs`
-  - [ ] Test basic CMC request/response
-  - [ ] Test CMC status codes
-  - [ ] Test CMC error conditions
+- ✅ Create `tests/integration/operations/cacerts_test.rs`
+  - ✅ Test successful CA certs retrieval
+  - ✅ Test invalid content-type handling
+  - ✅ Test malformed PKCS#7 response
+  - ✅ Test empty certificate list
+- ✅ Create `tests/integration/operations/enroll_test.rs`
+  - ✅ Test successful enrollment (HTTP 200)
+  - ✅ Test pending enrollment (HTTP 202 + Retry-After)
+  - ✅ Test authentication required (HTTP 401)
+  - ✅ Test server error (HTTP 500)
+  - ✅ Test CSR validation
+- ✅ Create `tests/integration/operations/reenroll_test.rs`
+  - ✅ Test successful re-enrollment
+  - ✅ Test missing client certificate
+  - ⚠️  Test expired certificate handling (placeholder)
+- ✅ Create `tests/integration/operations/csrattrs_test.rs`
+  - ✅ Test successful CSR attributes retrieval
+  - ✅ Test HTTP 404 (not supported)
+  - ✅ Test malformed attributes response
+- ✅ Create `tests/integration/operations/serverkeygen_test.rs`
+  - ✅ Test successful server keygen
+  - ✅ Test multipart response parsing
+  - ⚠️  Test encrypted vs unencrypted keys (placeholder)
+  - ✅ Test malformed multipart response
+- ✅ Create `tests/integration/operations/fullcmc_test.rs`
+  - ⚠️  Test basic CMC request/response (placeholder)
+  - ⚠️  Test CMC status codes (placeholder)
+  - ⚠️  Test CMC error conditions (placeholder)
 
 #### 10.1.4 Authentication Tests (`tests/integration/auth/`)
 
