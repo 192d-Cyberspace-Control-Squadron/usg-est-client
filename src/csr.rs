@@ -8,8 +8,7 @@ mod builder {
     use std::net::IpAddr;
 
     use rcgen::{
-        CertificateParams, DnType, ExtendedKeyUsagePurpose, KeyPair,
-        KeyUsagePurpose, SanType,
+        CertificateParams, DnType, ExtendedKeyUsagePurpose, KeyPair, KeyUsagePurpose, SanType,
     };
 
     use crate::error::{EstError, Result};
@@ -130,13 +129,17 @@ mod builder {
 
         /// Enable digital signature key usage.
         pub fn key_usage_digital_signature(mut self) -> Self {
-            self.params.key_usages.push(KeyUsagePurpose::DigitalSignature);
+            self.params
+                .key_usages
+                .push(KeyUsagePurpose::DigitalSignature);
             self
         }
 
         /// Enable key encipherment key usage.
         pub fn key_usage_key_encipherment(mut self) -> Self {
-            self.params.key_usages.push(KeyUsagePurpose::KeyEncipherment);
+            self.params
+                .key_usages
+                .push(KeyUsagePurpose::KeyEncipherment);
             self
         }
 
@@ -296,9 +299,11 @@ mod tests {
 
     #[test]
     fn test_generate_server_csr() {
-        let (csr_der, _key_pair) =
-            generate_server_csr("server.example.com", &["www.example.com", "api.example.com"])
-                .expect("Failed to generate server CSR");
+        let (csr_der, _key_pair) = generate_server_csr(
+            "server.example.com",
+            &["www.example.com", "api.example.com"],
+        )
+        .expect("Failed to generate server CSR");
 
         assert!(!csr_der.is_empty());
     }

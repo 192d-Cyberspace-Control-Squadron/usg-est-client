@@ -111,7 +111,8 @@ impl EstClient {
     ///
     /// RFC 7030 Section 4.2: Client Certificate Request Functions
     pub async fn simple_enroll(&self, csr_der: &[u8]) -> Result<EnrollmentResponse> {
-        self.enroll_request(operations::SIMPLE_ENROLL, csr_der).await
+        self.enroll_request(operations::SIMPLE_ENROLL, csr_der)
+            .await
     }
 
     /// Re-enroll (renew/rekey) an existing certificate.
@@ -129,7 +130,8 @@ impl EstClient {
     ///
     /// RFC 7030 Section 4.2.2: Simple Re-enrollment
     pub async fn simple_reenroll(&self, csr_der: &[u8]) -> Result<EnrollmentResponse> {
-        self.enroll_request(operations::SIMPLE_REENROLL, csr_der).await
+        self.enroll_request(operations::SIMPLE_REENROLL, csr_der)
+            .await
     }
 
     // =========================================================================
@@ -171,7 +173,7 @@ impl EstClient {
     /// # Arguments
     ///
     /// * `csr_der` - DER-encoded PKCS#10 CSR (with subject information but
-    ///               placeholder public key)
+    ///   placeholder public key)
     ///
     /// # Returns
     ///
@@ -283,17 +285,22 @@ impl EstClient {
         let certs = parse_certs_only(&body)?;
 
         if certs.is_empty() {
-            return Err(EstError::cms_parsing("No certificate in enrollment response"));
+            return Err(EstError::cms_parsing(
+                "No certificate in enrollment response",
+            ));
         }
 
         // Return the first certificate (the issued one)
-        Ok(EnrollmentResponse::issued(certs.into_iter().next().unwrap()))
+        Ok(EnrollmentResponse::issued(
+            certs.into_iter().next().unwrap(),
+        ))
     }
 
     /// Add HTTP Basic auth header if configured.
     fn add_auth_header(&self, request: reqwest::RequestBuilder) -> reqwest::RequestBuilder {
         if let Some(ref auth) = self.config.http_auth {
-            let credentials = BASE64_STANDARD.encode(format!("{}:{}", auth.username, auth.password));
+            let credentials =
+                BASE64_STANDARD.encode(format!("{}:{}", auth.username, auth.password));
             let header_value = format!("Basic {}", credentials);
             request.header(AUTHORIZATION, header_value)
         } else {
@@ -301,32 +308,12 @@ impl EstClient {
         }
     }
 
-    /// Check if response is an error and extract status/headers for error handling.
-    fn check_response_status(&self, response: &reqwest::Response) -> Result<()> {
-        let status = response.status();
-
-        if status.is_success() {
-            return Ok(());
-        }
-
-        // Handle 401 Unauthorized
-        if status == StatusCode::UNAUTHORIZED {
-            let challenge = response
-                .headers()
-                .get("www-authenticate")
-                .and_then(|v| v.to_str().ok())
-                .unwrap_or("unknown")
-                .to_string();
-            return Err(EstError::authentication_required(challenge));
-        }
-
-        // For other errors, we return a generic error here
-        // The actual message will be extracted after consuming the response
-        Err(EstError::server_error(status.as_u16(), "Server error"))
-    }
 
     /// Handle error responses from the server.
-    async fn handle_error_response(&self, response: reqwest::Response) -> Result<reqwest::Response> {
+    async fn handle_error_response(
+        &self,
+        response: reqwest::Response,
+    ) -> Result<reqwest::Response> {
         let status = response.status();
 
         if status.is_success() {
@@ -467,15 +454,18 @@ impl EstClient {
 
         match (private_key, certificate) {
             (Some(key), Some(cert)) => Ok(ServerKeygenResponse::new(cert, key, key_encrypted)),
-            (None, _) => Err(EstError::invalid_multipart("Missing private key in response")),
-            (_, None) => Err(EstError::invalid_multipart("Missing certificate in response")),
+            (None, _) => Err(EstError::invalid_multipart(
+                "Missing private key in response",
+            )),
+            (_, None) => Err(EstError::invalid_multipart(
+                "Missing certificate in response",
+            )),
         }
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
     use crate::config::EstClientConfig;
 
     #[test]

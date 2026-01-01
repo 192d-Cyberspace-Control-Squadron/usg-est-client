@@ -312,6 +312,9 @@ impl std::fmt::Debug for TrustAnchors {
     }
 }
 
+/// Type alias for fingerprint verification callback.
+pub type FingerprintVerifier = Arc<dyn Fn(&[u8; 32]) -> bool + Send + Sync>;
+
 /// Configuration for bootstrap/TOFU mode.
 #[derive(Clone)]
 pub struct BootstrapConfig {
@@ -319,7 +322,7 @@ pub struct BootstrapConfig {
     ///
     /// The fingerprint is a SHA-256 hash of the DER-encoded certificate.
     /// Return `true` to accept the certificate, `false` to reject.
-    pub verify_fingerprint: Arc<dyn Fn(&[u8; 32]) -> bool + Send + Sync>,
+    pub verify_fingerprint: FingerprintVerifier,
 }
 
 #[cfg(test)]
@@ -335,7 +338,10 @@ mod tests {
             .unwrap();
 
         let url = config.build_url("cacerts");
-        assert_eq!(url.as_str(), "https://est.example.com/.well-known/est/cacerts");
+        assert_eq!(
+            url.as_str(),
+            "https://est.example.com/.well-known/est/cacerts"
+        );
     }
 
     #[test]

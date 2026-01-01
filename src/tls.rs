@@ -101,8 +101,7 @@ fn build_reqwest_identity(identity: &ClientIdentity) -> Result<reqwest::Identity
 pub fn build_rustls_config(config: &EstClientConfig) -> Result<Arc<ClientConfig>> {
     let root_store = build_root_store(&config.trust_anchors)?;
 
-    let builder = ClientConfig::builder()
-        .with_root_certificates(root_store);
+    let builder = ClientConfig::builder().with_root_certificates(root_store);
 
     let tls_config = if let Some(ref identity) = config.client_identity {
         let (certs, key) = parse_client_identity(identity)?;

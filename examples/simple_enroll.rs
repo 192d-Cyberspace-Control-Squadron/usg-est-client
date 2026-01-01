@@ -11,9 +11,7 @@
 use std::env;
 use std::process::exit;
 
-use usg_est_client::{
-    csr::CsrBuilder, EnrollmentResponse, EstClient, EstClientConfig,
-};
+use usg_est_client::{csr::CsrBuilder, EnrollmentResponse, EstClient, EstClientConfig};
 
 #[tokio::main]
 async fn main() {
@@ -107,7 +105,7 @@ async fn main() {
 
     // Step 3: Generate CSR
     println!("Step 3: Generating CSR...");
-    let (csr_der, key_pair) = match CsrBuilder::new()
+    let (csr_der, _key_pair) = match CsrBuilder::new()
         .common_name(common_name)
         .organization("EST Client Example")
         .san_dns(common_name)

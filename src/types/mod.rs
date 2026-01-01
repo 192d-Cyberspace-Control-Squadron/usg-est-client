@@ -19,7 +19,7 @@ pub enum EnrollmentResponse {
     /// Certificate was issued immediately.
     Issued {
         /// The issued certificate.
-        certificate: Certificate,
+        certificate: Box<Certificate>,
     },
 
     /// Enrollment is pending manual approval.
@@ -34,7 +34,9 @@ pub enum EnrollmentResponse {
 impl EnrollmentResponse {
     /// Create a new issued response.
     pub fn issued(certificate: Certificate) -> Self {
-        Self::Issued { certificate }
+        Self::Issued {
+            certificate: Box::new(certificate),
+        }
     }
 
     /// Create a new pending response.

@@ -67,9 +67,7 @@ impl CmcResponse {
             .filter(|b| !b.is_ascii_whitespace())
             .collect();
 
-        let data = BASE64_STANDARD
-            .decode(&cleaned)
-            .map_err(EstError::Base64)?;
+        let data = BASE64_STANDARD.decode(&cleaned).map_err(EstError::Base64)?;
 
         // For now, we don't fully parse the CMC structure
         // This is a placeholder for complete CMC implementation
@@ -150,26 +148,32 @@ pub mod controls {
     use const_oid::ObjectIdentifier;
 
     /// CMC Status Info V2 (1.3.6.1.5.5.7.7.25)
+    #[allow(dead_code)]
     pub const CMC_STATUS_INFO_V2: ObjectIdentifier =
         ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.7.25");
 
     /// Identity Proof V2 (1.3.6.1.5.5.7.7.34)
+    #[allow(dead_code)]
     pub const IDENTITY_PROOF_V2: ObjectIdentifier =
         ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.7.34");
 
     /// POP Link Random (1.3.6.1.5.5.7.7.22)
+    #[allow(dead_code)]
     pub const POP_LINK_RANDOM: ObjectIdentifier =
         ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.7.22");
 
     /// POP Link Witness V2 (1.3.6.1.5.5.7.7.33)
+    #[allow(dead_code)]
     pub const POP_LINK_WITNESS_V2: ObjectIdentifier =
         ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.7.33");
 
     /// Revocation Request (1.3.6.1.5.5.7.7.17)
+    #[allow(dead_code)]
     pub const REVOCATION_REQUEST: ObjectIdentifier =
         ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.7.17");
 
     /// Modify Cert Request (1.3.6.1.5.5.7.7.16)
+    #[allow(dead_code)]
     pub const MODIFY_CERT_REQUEST: ObjectIdentifier =
         ObjectIdentifier::new_unwrap("1.3.6.1.5.5.7.7.16");
 }

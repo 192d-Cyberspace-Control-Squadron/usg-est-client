@@ -34,10 +34,7 @@ pub fn is_key_encrypted(key_data: &[u8]) -> bool {
 ///
 /// This handles CMS EnvelopedData decryption when the server has
 /// encrypted the private key for secure transport.
-pub fn decrypt_private_key(
-    _encrypted_key: &[u8],
-    _decryption_key: &[u8],
-) -> Result<Vec<u8>> {
+pub fn decrypt_private_key(_encrypted_key: &[u8], _decryption_key: &[u8]) -> Result<Vec<u8>> {
     // Full implementation would require:
     // 1. Parse CMS EnvelopedData
     // 2. Extract RecipientInfo

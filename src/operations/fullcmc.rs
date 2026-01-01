@@ -115,7 +115,10 @@ mod tests {
 
     #[test]
     fn test_revocation_reason_codes() {
-        assert_eq!(RevocationReason::from_code(1), Some(RevocationReason::KeyCompromise));
+        assert_eq!(
+            RevocationReason::from_code(1),
+            Some(RevocationReason::KeyCompromise)
+        );
         assert_eq!(RevocationReason::KeyCompromise.to_code(), 1);
         assert_eq!(RevocationReason::from_code(7), None); // 7 is not used
     }

@@ -12,10 +12,7 @@ use crate::error::Result;
 /// Per RFC 7030 Section 4.2.2:
 /// "The Subject field and SubjectAltName extension MUST be identical
 /// to the corresponding fields in the certificate being renewed/rekeyed"
-pub fn validate_reenroll_csr(
-    _csr_der: &[u8],
-    _current_cert: &Certificate,
-) -> Result<()> {
+pub fn validate_reenroll_csr(_csr_der: &[u8], _current_cert: &Certificate) -> Result<()> {
     // Full validation would require:
     // 1. Parse the CSR
     // 2. Extract Subject from CSR
@@ -64,8 +61,6 @@ pub fn get_serial_number(cert: &Certificate) -> Vec<u8> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
     // Note: Full tests would require test certificates
     // These are placeholder tests
 

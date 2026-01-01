@@ -87,6 +87,7 @@ pub fn parse_certs_only(body: &[u8]) -> Result<Vec<Certificate>> {
 /// Parse a PKCS#7 response that may contain a single certificate.
 ///
 /// Used for enrollment responses where we expect exactly one certificate.
+#[allow(dead_code)]
 pub fn parse_single_certificate(body: &[u8]) -> Result<Certificate> {
     let certs = parse_certs_only(body)?;
 
@@ -111,9 +112,7 @@ fn decode_base64(data: &[u8]) -> Result<Vec<u8>> {
         .filter(|b| !b.is_ascii_whitespace())
         .collect();
 
-    BASE64_STANDARD
-        .decode(&cleaned)
-        .map_err(EstError::Base64)
+    BASE64_STANDARD.decode(&cleaned).map_err(EstError::Base64)
 }
 
 /// Extract SignedData from ContentInfo.
@@ -166,10 +165,11 @@ fn extract_certificates(signed_data: &SignedData) -> Result<Vec<Certificate>> {
 }
 
 /// Encode a certificate to base64 DER format.
+#[allow(dead_code)]
 pub fn encode_certificate_base64(cert: &Certificate) -> Result<String> {
-    let der = cert
-        .to_der()
-        .map_err(|e| EstError::certificate_parsing(format!("Failed to encode certificate: {}", e)))?;
+    let der = cert.to_der().map_err(|e| {
+        EstError::certificate_parsing(format!("Failed to encode certificate: {}", e))
+    })?;
 
     Ok(BASE64_STANDARD.encode(&der))
 }
@@ -177,6 +177,7 @@ pub fn encode_certificate_base64(cert: &Certificate) -> Result<String> {
 /// Encode DER data to base64 with line wrapping.
 ///
 /// Per RFC 7030, responses use base64 Content-Transfer-Encoding.
+#[allow(dead_code)]
 pub fn encode_base64_wrapped(data: &[u8], line_length: usize) -> String {
     let encoded = BASE64_STANDARD.encode(data);
 

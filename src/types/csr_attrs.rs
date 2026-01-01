@@ -49,9 +49,7 @@ impl CsrAttributes {
             .filter(|b| !b.is_ascii_whitespace())
             .collect();
 
-        let der_bytes = BASE64_STANDARD
-            .decode(&cleaned)
-            .map_err(EstError::Base64)?;
+        let der_bytes = BASE64_STANDARD.decode(&cleaned).map_err(EstError::Base64)?;
 
         // Parse ASN.1 SEQUENCE OF AttrOrOID
         Self::parse_der(&der_bytes)
@@ -70,7 +68,9 @@ impl CsrAttributes {
 
         // Check for SEQUENCE tag
         if data.is_empty() || data[0] != 0x30 {
-            return Err(EstError::cms_parsing("Invalid CSR attributes: expected SEQUENCE"));
+            return Err(EstError::cms_parsing(
+                "Invalid CSR attributes: expected SEQUENCE",
+            ));
         }
 
         // Parse the outer sequence length
@@ -84,7 +84,9 @@ impl CsrAttributes {
 
             if tag == 0x06 {
                 // OID
-                if let Ok(oid) = ObjectIdentifier::from_der(&content[offset..offset + 1 + element_len + element_content.len()]) {
+                if let Ok(oid) = ObjectIdentifier::from_der(
+                    &content[offset..offset + 1 + element_len + element_content.len()],
+                ) {
                     attributes.push(CsrAttribute::new(oid));
                 }
             } else if tag == 0x30 {
@@ -105,7 +107,9 @@ impl CsrAttributes {
     fn parse_attribute(data: &[u8]) -> Result<CsrAttribute> {
         // Attribute ::= SEQUENCE { type OID, values SET OF ANY }
         if data.is_empty() || data[0] != 0x30 {
-            return Err(EstError::cms_parsing("Invalid attribute: expected SEQUENCE"));
+            return Err(EstError::cms_parsing(
+                "Invalid attribute: expected SEQUENCE",
+            ));
         }
 
         let (content, _) = parse_der_length(&data[1..])?;
@@ -216,20 +220,16 @@ pub mod oids {
         ObjectIdentifier::new_unwrap("1.2.840.113549.1.9.14");
 
     /// Subject Alternative Name OID (2.5.29.17)
-    pub const SUBJECT_ALT_NAME: ObjectIdentifier =
-        ObjectIdentifier::new_unwrap("2.5.29.17");
+    pub const SUBJECT_ALT_NAME: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.29.17");
 
     /// Key Usage OID (2.5.29.15)
-    pub const KEY_USAGE: ObjectIdentifier =
-        ObjectIdentifier::new_unwrap("2.5.29.15");
+    pub const KEY_USAGE: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.29.15");
 
     /// Extended Key Usage OID (2.5.29.37)
-    pub const EXTENDED_KEY_USAGE: ObjectIdentifier =
-        ObjectIdentifier::new_unwrap("2.5.29.37");
+    pub const EXTENDED_KEY_USAGE: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.29.37");
 
     /// Basic Constraints OID (2.5.29.19)
-    pub const BASIC_CONSTRAINTS: ObjectIdentifier =
-        ObjectIdentifier::new_unwrap("2.5.29.19");
+    pub const BASIC_CONSTRAINTS: ObjectIdentifier = ObjectIdentifier::new_unwrap("2.5.29.19");
 }
 
 #[cfg(test)]

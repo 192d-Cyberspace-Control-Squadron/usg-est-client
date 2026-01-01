@@ -180,9 +180,7 @@ impl EstError {
     pub fn is_retryable(&self) -> bool {
         matches!(
             self,
-            Self::EnrollmentPending { .. }
-                | Self::Http(_)
-                | Self::Tls(_)
+            Self::EnrollmentPending { .. } | Self::Http(_) | Self::Tls(_)
         )
     }
 
@@ -205,7 +203,10 @@ mod tests {
         assert_eq!(err.to_string(), "Server error 400: Bad Request");
 
         let err = EstError::enrollment_pending(30);
-        assert_eq!(err.to_string(), "Enrollment pending, retry after 30 seconds");
+        assert_eq!(
+            err.to_string(),
+            "Enrollment pending, retry after 30 seconds"
+        );
     }
 
     #[test]

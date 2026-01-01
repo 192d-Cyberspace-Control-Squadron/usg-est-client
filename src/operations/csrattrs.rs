@@ -56,14 +56,18 @@ mod tests {
         let mut attrs = CsrAttributes::new();
         assert!(!requires_challenge_password(&attrs));
 
-        attrs.attributes.push(CsrAttribute::new(oids::CHALLENGE_PASSWORD));
+        attrs
+            .attributes
+            .push(CsrAttribute::new(oids::CHALLENGE_PASSWORD));
         assert!(requires_challenge_password(&attrs));
     }
 
     #[test]
     fn test_describe_requirements() {
         let mut attrs = CsrAttributes::new();
-        attrs.attributes.push(CsrAttribute::new(oids::CHALLENGE_PASSWORD));
+        attrs
+            .attributes
+            .push(CsrAttribute::new(oids::CHALLENGE_PASSWORD));
         attrs.attributes.push(CsrAttribute::new(oids::KEY_USAGE));
 
         let descriptions = describe_requirements(&attrs);

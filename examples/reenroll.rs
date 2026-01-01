@@ -177,7 +177,9 @@ fn get_arg<'a>(args: &'a [String], flag: &str) -> Option<&'a str> {
         .map(|s| s.as_str())
 }
 
-fn parse_pem_certificate(pem: &[u8]) -> Result<usg_est_client::Certificate, Box<dyn std::error::Error>> {
+fn parse_pem_certificate(
+    pem: &[u8],
+) -> Result<usg_est_client::Certificate, Box<dyn std::error::Error>> {
     use der::Decode;
 
     // Simple PEM parsing

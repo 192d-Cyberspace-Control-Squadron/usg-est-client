@@ -104,10 +104,7 @@ impl BootstrapClient {
         let certs = parse_certs_only(&body)?;
 
         // Compute fingerprints
-        let fingerprints = certs
-            .iter()
-            .map(|c| Self::compute_fingerprint(c))
-            .collect::<Result<Vec<_>>>()?;
+        let fingerprints = certs.iter().map(Self::compute_fingerprint).collect::<Result<Vec<_>>>()?;
 
         Ok((CaCertificates::new(certs), fingerprints))
     }
@@ -196,10 +193,7 @@ impl BootstrapClient {
     ///
     /// This provides a callback-based verification flow where the caller
     /// can prompt the user to verify fingerprints.
-    pub async fn fetch_and_verify<F>(
-        &self,
-        verify_callback: F,
-    ) -> Result<CaCertificates>
+    pub async fn fetch_and_verify<F>(&self, verify_callback: F) -> Result<CaCertificates>
     where
         F: Fn(&Certificate, &[u8; 32]) -> bool,
     {
@@ -219,10 +213,7 @@ impl BootstrapClient {
 }
 
 /// Verify a list of certificates against expected fingerprints.
-pub fn verify_all_fingerprints(
-    certs: &CaCertificates,
-    expected: &[[u8; 32]],
-) -> Result<bool> {
+pub fn verify_all_fingerprints(certs: &CaCertificates, expected: &[[u8; 32]]) -> Result<bool> {
     if certs.len() != expected.len() {
         return Ok(false);
     }
