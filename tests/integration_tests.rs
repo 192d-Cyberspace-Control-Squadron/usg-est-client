@@ -8,7 +8,9 @@ mod integration;
 #[path = "integration/operations/mod.rs"]
 mod operations;
 
+#[path = "integration/auth/mod.rs"]
+mod auth;
+
 // More test modules will be added:
-// mod auth;
 // mod tls;
 // mod errors;
