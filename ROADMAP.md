@@ -456,11 +456,46 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-### 10.3 Possible Future Enhancements
+### 10.3 Platform Support Expansion
+
+#### 10.3.1 WASM Support Investigation
+
+- [ ] Research rustls WASM compatibility
+- [ ] Research reqwest WASM compatibility
+- [ ] Identify WASM-incompatible dependencies
+- [ ] Create WASM compatibility matrix document
+- [ ] Evaluate alternative HTTP clients for WASM (web-sys fetch)
+- [ ] Create proof-of-concept WASM build
+- [ ] Document WASM limitations and workarounds
+- [ ] Add WASM example if feasible
+
+#### 10.3.2 Embedded/no_std Support Investigation
+
+- [ ] Audit dependencies for no_std compatibility
+- [ ] Identify std-only features in current implementation
+- [ ] Research embedded HTTP client options (reqwless, embedded-nal)
+- [ ] Research embedded TLS options (embedded-tls, rustls-nostd)
+- [ ] Design conditional compilation strategy for no_std
+- [ ] Create proof-of-concept no_std build
+- [ ] Document no_std limitations and requirements
+- [ ] Add embedded example if feasible
+
+#### 10.3.3 Platform-Specific Optimizations
+
+- [ ] Investigate platform-specific TLS backends
+- [ ] Evaluate OpenSSL backend option for Linux
+- [ ] Evaluate Security framework integration for macOS
+- [ ] Evaluate CNG integration for Windows
+- [ ] Add optional platform-specific features to `Cargo.toml`
+- [ ] Document platform-specific configurations
+
+---
+
+### Possible Future Enhancements
 
 These features are outside the core EST protocol scope but could be considered for future development:
 
-#### 10.3.1 SCEP Protocol Support
+#### SCEP Protocol Support
 
 **Note**: SCEP (Simple Certificate Enrollment Protocol, RFC 8894) is a different protocol from EST. Adding SCEP support would significantly expand the scope of this library.
 
@@ -473,41 +508,6 @@ These features are outside the core EST protocol scope but could be considered f
 - [ ] Add `scep` feature flag to `Cargo.toml`
 - [ ] Create SCEP example (`examples/scep_enroll.rs`)
 - [ ] Document SCEP vs EST comparison in docs
-
----
-
-### 10.4 Platform Support Expansion
-
-#### 10.4.1 WASM Support Investigation
-
-- [ ] Research rustls WASM compatibility
-- [ ] Research reqwest WASM compatibility
-- [ ] Identify WASM-incompatible dependencies
-- [ ] Create WASM compatibility matrix document
-- [ ] Evaluate alternative HTTP clients for WASM (web-sys fetch)
-- [ ] Create proof-of-concept WASM build
-- [ ] Document WASM limitations and workarounds
-- [ ] Add WASM example if feasible
-
-#### 10.4.2 Embedded/no_std Support Investigation
-
-- [ ] Audit dependencies for no_std compatibility
-- [ ] Identify std-only features in current implementation
-- [ ] Research embedded HTTP client options (reqwless, embedded-nal)
-- [ ] Research embedded TLS options (embedded-tls, rustls-nostd)
-- [ ] Design conditional compilation strategy for no_std
-- [ ] Create proof-of-concept no_std build
-- [ ] Document no_std limitations and requirements
-- [ ] Add embedded example if feasible
-
-#### 10.4.3 Platform-Specific Optimizations
-
-- [ ] Investigate platform-specific TLS backends
-- [ ] Evaluate OpenSSL backend option for Linux
-- [ ] Evaluate Security framework integration for macOS
-- [ ] Evaluate CNG integration for Windows
-- [ ] Add optional platform-specific features to `Cargo.toml`
-- [ ] Document platform-specific configurations
 
 ---
 

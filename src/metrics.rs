@@ -322,7 +322,10 @@ pub fn format_metrics_summary(summary: &MetricsSummary) -> String {
 
     output.push_str("=== EST Client Metrics Summary ===\n\n");
 
-    output.push_str(&format!("Total Operations: {}\n", summary.total_operations()));
+    output.push_str(&format!(
+        "Total Operations: {}\n",
+        summary.total_operations()
+    ));
     output.push_str(&format!(
         "Overall Success Rate: {:.2}%\n\n",
         summary.overall_success_rate()
@@ -438,22 +441,17 @@ mod tests {
         let collector = MetricsCollector::new();
 
         collector
-            .record_operation(
-                OperationType::GetCaCerts,
-                Duration::from_millis(100),
-                true,
-            )
+            .record_operation(OperationType::GetCaCerts, Duration::from_millis(100), true)
             .await;
         collector
-            .record_operation(
-                OperationType::GetCaCerts,
-                Duration::from_millis(200),
-                true,
-            )
+            .record_operation(OperationType::GetCaCerts, Duration::from_millis(200), true)
             .await;
 
         let summary = collector.get_summary().await;
-        assert_eq!(summary.ca_certs.average_duration(), Duration::from_millis(150));
+        assert_eq!(
+            summary.ca_certs.average_duration(),
+            Duration::from_millis(150)
+        );
     }
 
     #[tokio::test]

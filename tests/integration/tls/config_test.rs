@@ -1,8 +1,8 @@
 //! Integration tests for TLS configuration
 
-use usg_est_client::{EstClient, EstClientConfig};
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::{EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_tls_12_minimum_version_enforcement() {
@@ -62,8 +62,7 @@ async fn test_certificate_verification_with_webpki_roots() {
 #[tokio::test]
 async fn test_certificate_verification_with_explicit_trust_anchors() {
     // Load CA certificate
-    let ca_cert_pem = fs::read("tests/fixtures/certs/ca.pem")
-        .expect("Failed to load CA cert");
+    let ca_cert_pem = fs::read("tests/fixtures/certs/ca.pem").expect("Failed to load CA cert");
 
     // Create config with explicit trust anchor
     let config = EstClientConfig::builder()
@@ -75,7 +74,10 @@ async fn test_certificate_verification_with_explicit_trust_anchors() {
 
     // Verify explicit trust anchors are configured
     assert!(
-        matches!(config.trust_anchors, usg_est_client::TrustAnchors::Explicit(_)),
+        matches!(
+            config.trust_anchors,
+            usg_est_client::TrustAnchors::Explicit(_)
+        ),
         "Should use explicit trust anchors"
     );
 }
@@ -118,7 +120,10 @@ async fn test_insecure_mode_for_testing_only() {
     let client = EstClient::new(config).await;
 
     // Should succeed with insecure mode
-    assert!(client.is_ok(), "Client should allow insecure mode for testing");
+    assert!(
+        client.is_ok(),
+        "Client should allow insecure mode for testing"
+    );
 
     // WARNING: trust_any_insecure should NEVER be used in production!
 }
@@ -129,16 +134,19 @@ async fn test_tls_configuration_with_client_certificate() {
     let mock = MockEstServer::start().await;
 
     // Load client cert and key
-    let client_cert_pem = fs::read("tests/fixtures/certs/client.pem")
-        .expect("Failed to load client cert");
-    let client_key_pem = fs::read("tests/fixtures/certs/client-key.pem")
-        .expect("Failed to load client key");
+    let client_cert_pem =
+        fs::read("tests/fixtures/certs/client.pem").expect("Failed to load client cert");
+    let client_key_pem =
+        fs::read("tests/fixtures/certs/client-key.pem").expect("Failed to load client key");
 
     // Create EST client with TLS client cert
     let config = EstClientConfig::builder()
         .server_url(&mock.url())
         .expect("Valid URL")
-        .client_identity(usg_est_client::ClientIdentity::new(client_cert_pem, client_key_pem))
+        .client_identity(usg_est_client::ClientIdentity::new(
+            client_cert_pem,
+            client_key_pem,
+        ))
         .trust_any_insecure()
         .build()
         .expect("Valid config");
@@ -146,14 +154,16 @@ async fn test_tls_configuration_with_client_certificate() {
     let client = EstClient::new(config).await;
 
     // Should succeed with client certificate configured
-    assert!(client.is_ok(), "Client should support TLS client certificates");
+    assert!(
+        client.is_ok(),
+        "Client should support TLS client certificates"
+    );
 }
 
 #[tokio::test]
 async fn test_tls_with_multiple_trust_anchors() {
     // Load multiple CA certificates
-    let ca_cert_pem = fs::read("tests/fixtures/certs/ca.pem")
-        .expect("Failed to load CA cert");
+    let ca_cert_pem = fs::read("tests/fixtures/certs/ca.pem").expect("Failed to load CA cert");
 
     // Create another CA cert (for this test, we'll use the same one twice)
     let ca_certs = vec![ca_cert_pem.clone(), ca_cert_pem];
@@ -187,7 +197,11 @@ async fn test_tls_timeout_configuration() {
         .expect("Valid config");
 
     // Verify timeout is configured
-    assert_eq!(config.timeout, Duration::from_secs(10), "Should have custom timeout");
+    assert_eq!(
+        config.timeout,
+        Duration::from_secs(10),
+        "Should have custom timeout"
+    );
 }
 
 #[tokio::test]

@@ -136,7 +136,9 @@ impl RevocationConfigBuilder {
         RevocationConfig {
             enable_crl: self.enable_crl.unwrap_or(default.enable_crl),
             enable_ocsp: self.enable_ocsp.unwrap_or(default.enable_ocsp),
-            crl_cache_duration: self.crl_cache_duration.unwrap_or(default.crl_cache_duration),
+            crl_cache_duration: self
+                .crl_cache_duration
+                .unwrap_or(default.crl_cache_duration),
             crl_cache_max_entries: self
                 .crl_cache_max_entries
                 .unwrap_or(default.crl_cache_max_entries),
@@ -418,7 +420,9 @@ impl RevocationChecker {
 
                 if ext.extn_id == aia_oid {
                     // TODO: Parse AIA extension and extract OCSP URL
-                    debug!("Found Authority Information Access extension (parsing not implemented)");
+                    debug!(
+                        "Found Authority Information Access extension (parsing not implemented)"
+                    );
                 }
             }
         }

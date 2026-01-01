@@ -1,8 +1,8 @@
 //! Integration tests for POST /serverkeygen operation
 
-use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_successful_serverkeygen() {
@@ -26,7 +26,9 @@ async fn test_successful_serverkeygen() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate a CSR (for serverkeygen, public key info is used)
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -40,13 +42,21 @@ async fn test_successful_serverkeygen() {
     // Note: This test may fail due to multipart parsing complexity
     // The infrastructure is correct, implementation details may need adjustment
     if result.is_err() {
-        eprintln!("Serverkeygen test skipped due to parsing: {:?}", result.err());
+        eprintln!(
+            "Serverkeygen test skipped due to parsing: {:?}",
+            result.err()
+        );
         return;
     }
 
     // Assert: Should succeed with certificate and private key
     let response = result.unwrap();
-    assert!(!response.certificate.tbs_certificate.serial_number.as_bytes().is_empty());
+    assert!(!response
+        .certificate
+        .tbs_certificate
+        .serial_number
+        .as_bytes()
+        .is_empty());
     assert!(!response.private_key.is_empty());
 }
 
@@ -93,7 +103,9 @@ async fn test_malformed_multipart_response() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate a CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -105,5 +117,8 @@ async fn test_malformed_multipart_response() {
     let result = client.server_keygen(&csr_der).await;
 
     // Assert: Should fail with multipart parsing error
-    assert!(result.is_err(), "Should fail with malformed multipart response");
+    assert!(
+        result.is_err(),
+        "Should fail with malformed multipart response"
+    );
 }

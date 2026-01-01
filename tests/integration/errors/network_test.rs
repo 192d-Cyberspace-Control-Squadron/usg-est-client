@@ -1,7 +1,7 @@
 //! Integration tests for network error handling
 
-use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 use std::time::Duration;
+use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_connection_timeout() {
@@ -15,7 +15,9 @@ async fn test_connection_timeout() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -49,7 +51,9 @@ async fn test_connection_refused() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -75,7 +79,9 @@ async fn test_dns_resolution_failure() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -149,7 +155,9 @@ async fn test_slow_server_response() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")
@@ -157,10 +165,7 @@ async fn test_slow_server_response() {
         .expect("CSR generation failed");
 
     // Wrap in timeout to ensure test doesn't hang
-    let result = timeout(
-        Duration::from_secs(2),
-        client.simple_enroll(&csr_der)
-    ).await;
+    let result = timeout(Duration::from_secs(2), client.simple_enroll(&csr_der)).await;
 
     // Should either timeout or get an error
     assert!(
@@ -185,8 +190,7 @@ async fn test_invalid_url_scheme() {
 #[tokio::test]
 async fn test_malformed_url() {
     // Test completely invalid URLs
-    let result = EstClientConfig::builder()
-        .server_url("not-a-valid-url");
+    let result = EstClientConfig::builder().server_url("not-a-valid-url");
 
     // Should fail to parse
     assert!(result.is_err(), "Should reject malformed URL");
@@ -195,8 +199,7 @@ async fn test_malformed_url() {
 #[tokio::test]
 async fn test_url_with_invalid_port() {
     // Test URL with invalid port number
-    let result = EstClientConfig::builder()
-        .server_url("https://test.example.com:99999");
+    let result = EstClientConfig::builder().server_url("https://test.example.com:99999");
 
     // Should fail - port number out of range
     assert!(result.is_err(), "Should reject invalid port number");

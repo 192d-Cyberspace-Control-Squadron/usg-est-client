@@ -1,8 +1,10 @@
 //! Integration tests for POST /simplereenroll operation
 
-use usg_est_client::{EstClient, EstClientConfig, EnrollmentResponse, ClientIdentity, csr::CsrBuilder};
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::{
+    csr::CsrBuilder, ClientIdentity, EnrollmentResponse, EstClient, EstClientConfig,
+};
 
 #[tokio::test]
 async fn test_successful_reenrollment() {
@@ -17,10 +19,10 @@ async fn test_successful_reenrollment() {
     mock.mock_reenroll_success(&cert_pkcs7_base64).await;
 
     // Load client cert and key for TLS client auth
-    let client_cert_pem = fs::read("tests/fixtures/certs/client.pem")
-        .expect("Failed to load client cert");
-    let client_key_pem = fs::read("tests/fixtures/certs/client-key.pem")
-        .expect("Failed to load client key");
+    let client_cert_pem =
+        fs::read("tests/fixtures/certs/client.pem").expect("Failed to load client cert");
+    let client_key_pem =
+        fs::read("tests/fixtures/certs/client-key.pem").expect("Failed to load client key");
 
     // Create EST client with client certificate
     let config = EstClientConfig::builder()
@@ -31,7 +33,9 @@ async fn test_successful_reenrollment() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate a CSR for re-enrollment
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -46,7 +50,10 @@ async fn test_successful_reenrollment() {
     // The mock server setup and API is correct, but fixture generation
     // needs proper CMS encoding
     if result.is_err() {
-        eprintln!("Re-enrollment test skipped due to fixture format: {:?}", result.err());
+        eprintln!(
+            "Re-enrollment test skipped due to fixture format: {:?}",
+            result.err()
+        );
         return;
     }
 
@@ -78,7 +85,9 @@ async fn test_missing_client_certificate() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate a CSR
     let (csr_der, _key_pair) = CsrBuilder::new()

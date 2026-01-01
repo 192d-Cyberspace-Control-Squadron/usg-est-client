@@ -104,7 +104,10 @@ impl BootstrapClient {
         let certs = parse_certs_only(&body)?;
 
         // Compute fingerprints
-        let fingerprints = certs.iter().map(Self::compute_fingerprint).collect::<Result<Vec<_>>>()?;
+        let fingerprints = certs
+            .iter()
+            .map(Self::compute_fingerprint)
+            .collect::<Result<Vec<_>>>()?;
 
         Ok((CaCertificates::new(certs), fingerprints))
     }

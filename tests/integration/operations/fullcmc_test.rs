@@ -1,7 +1,7 @@
 //! Integration tests for POST /fullcmc operation
 
-use usg_est_client::{EstClient, EstClientConfig, CmcRequest};
 use crate::integration::MockEstServer;
+use usg_est_client::{CmcRequest, EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_basic_cmc_request_response() {
@@ -20,7 +20,9 @@ async fn test_basic_cmc_request_response() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Create a basic CMC request
     // Note: CmcRequest construction is complex and requires proper PKIData

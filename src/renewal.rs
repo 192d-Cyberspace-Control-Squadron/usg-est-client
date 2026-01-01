@@ -41,7 +41,7 @@ use tracing::{debug, error, info, warn};
 use x509_cert::Certificate;
 
 /// Configuration for automatic certificate renewal.
-# [derive(Clone)]
+#[derive(Clone)]
 pub struct RenewalConfig {
     /// Time before expiration to trigger renewal (e.g., 30 days).
     pub renewal_threshold: Duration,
@@ -138,7 +138,7 @@ impl RenewalConfigBuilder {
 }
 
 /// Events that occur during the renewal process.
-# [derive(Clone)]
+#[derive(Clone)]
 pub enum RenewalEvent {
     /// Certificate expiration check started.
     CheckStarted,
@@ -475,7 +475,10 @@ mod tests {
             .retry_delay(Duration::from_secs(30 * 60))
             .build();
 
-        assert_eq!(config.renewal_threshold, Duration::from_secs(7 * 24 * 60 * 60));
+        assert_eq!(
+            config.renewal_threshold,
+            Duration::from_secs(7 * 24 * 60 * 60)
+        );
         assert_eq!(config.check_interval, Duration::from_secs(60 * 60));
         assert_eq!(config.max_retries, 5);
         assert_eq!(config.retry_delay, Duration::from_secs(30 * 60));
@@ -484,7 +487,10 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = RenewalConfig::default_config();
-        assert_eq!(config.renewal_threshold, Duration::from_secs(30 * 24 * 60 * 60));
+        assert_eq!(
+            config.renewal_threshold,
+            Duration::from_secs(30 * 24 * 60 * 60)
+        );
         assert_eq!(config.check_interval, Duration::from_secs(24 * 60 * 60));
         assert_eq!(config.max_retries, 3);
     }

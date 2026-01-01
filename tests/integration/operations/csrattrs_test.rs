@@ -1,8 +1,8 @@
 //! Integration tests for GET /csrattrs operation
 
-use usg_est_client::{EstClient, EstClientConfig};
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::{EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_successful_csrattrs_retrieval() {
@@ -24,17 +24,26 @@ async fn test_successful_csrattrs_retrieval() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CSR attributes
     let result = client.get_csr_attributes().await;
 
     // Assert: Should succeed
-    assert!(result.is_ok(), "get_csr_attributes failed: {:?}", result.err());
+    assert!(
+        result.is_ok(),
+        "get_csr_attributes failed: {:?}",
+        result.err()
+    );
     let attrs = result.unwrap();
 
     // Should have at least one OID
-    assert!(!attrs.oids().is_empty(), "CSR attributes should contain OIDs");
+    assert!(
+        !attrs.oids().is_empty(),
+        "CSR attributes should contain OIDs"
+    );
 }
 
 #[tokio::test]
@@ -53,13 +62,18 @@ async fn test_csrattrs_not_supported() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CSR attributes when not supported
     let result = client.get_csr_attributes().await;
 
     // Assert: Should fail with NotSupported error
-    assert!(result.is_err(), "Should fail when CSR attributes not supported");
+    assert!(
+        result.is_err(),
+        "Should fail when CSR attributes not supported"
+    );
     let err = result.unwrap_err();
     assert!(
         matches!(err, usg_est_client::EstError::NotSupported { .. }),
@@ -74,7 +88,8 @@ async fn test_malformed_csrattrs_response() {
     let mock = MockEstServer::start().await;
 
     // Mock malformed response
-    mock.mock_malformed_body("/.well-known/est/csrattrs", "application/csrattrs").await;
+    mock.mock_malformed_body("/.well-known/est/csrattrs", "application/csrattrs")
+        .await;
 
     // Create EST client
     let config = EstClientConfig::builder()
@@ -84,7 +99,9 @@ async fn test_malformed_csrattrs_response() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CSR attributes with malformed response
     let result = client.get_csr_attributes().await;

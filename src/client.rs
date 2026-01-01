@@ -308,7 +308,6 @@ impl EstClient {
         }
     }
 
-
     /// Handle error responses from the server.
     async fn handle_error_response(
         &self,

@@ -1,8 +1,8 @@
 //! Integration tests for GET /cacerts operation
 
-use usg_est_client::{EstClient, EstClientConfig};
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::{EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_successful_cacerts_retrieval() {
@@ -24,7 +24,9 @@ async fn test_successful_cacerts_retrieval() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CA certs
     let result = client.get_ca_certs().await;
@@ -43,7 +45,8 @@ async fn test_invalid_content_type_handling() {
     let mock = MockEstServer::start().await;
 
     // Mock invalid content type response
-    mock.mock_invalid_content_type("/.well-known/est/cacerts").await;
+    mock.mock_invalid_content_type("/.well-known/est/cacerts")
+        .await;
 
     // Create EST client
     let config = EstClientConfig::builder()
@@ -53,7 +56,9 @@ async fn test_invalid_content_type_handling() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CA certs with invalid content type
     let result = client.get_ca_certs().await;
@@ -63,9 +68,9 @@ async fn test_invalid_content_type_handling() {
     assert!(result.is_err(), "Should fail with invalid content type");
     let err = result.unwrap_err();
     assert!(
-        matches!(err, usg_est_client::EstError::InvalidContentType { .. }) ||
-        matches!(err, usg_est_client::EstError::Base64(_)) ||
-        matches!(err, usg_est_client::EstError::CmsParsing(_)),
+        matches!(err, usg_est_client::EstError::InvalidContentType { .. })
+            || matches!(err, usg_est_client::EstError::Base64(_))
+            || matches!(err, usg_est_client::EstError::CmsParsing(_)),
         "Expected InvalidContentType, Base64, or CmsParsing error, got: {:?}",
         err
     );
@@ -81,7 +86,8 @@ async fn test_malformed_pkcs7_response() {
         .expect("Failed to load malformed fixture");
 
     // Mock malformed response
-    mock.mock_malformed_body("/.well-known/est/cacerts", "application/pkcs7-mime").await;
+    mock.mock_malformed_body("/.well-known/est/cacerts", "application/pkcs7-mime")
+        .await;
 
     // Create EST client
     let config = EstClientConfig::builder()
@@ -91,7 +97,9 @@ async fn test_malformed_pkcs7_response() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CA certs with malformed response
     let result = client.get_ca_certs().await;
@@ -120,7 +128,9 @@ async fn test_empty_certificate_list() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CA certs with empty list
     let result = client.get_ca_certs().await;

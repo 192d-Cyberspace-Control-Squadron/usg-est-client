@@ -1,7 +1,7 @@
 //! Integration tests for retry logic
 
-use usg_est_client::{EstClient, EstClientConfig, EstError, csr::CsrBuilder};
 use crate::integration::MockEstServer;
+use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig, EstError};
 
 #[tokio::test]
 async fn test_retry_after_header_parsing() {
@@ -18,7 +18,9 @@ async fn test_retry_after_header_parsing() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")
@@ -43,33 +45,46 @@ async fn test_error_is_retryable() {
 
     // HTTP 202 with Retry-After is retryable
     let pending_err = EstError::enrollment_pending(300);
-    assert!(pending_err.is_retryable(), "Pending enrollment should be retryable");
-    assert_eq!(pending_err.retry_after(), Some(300), "Should have retry_after value");
+    assert!(
+        pending_err.is_retryable(),
+        "Pending enrollment should be retryable"
+    );
+    assert_eq!(
+        pending_err.retry_after(),
+        Some(300),
+        "Should have retry_after value"
+    );
 
     // HTTP 401 is not automatically retryable (needs new credentials)
     let auth_err = EstError::authentication_required("Basic".to_string());
-    assert!(!auth_err.is_retryable(), "Auth required should not be auto-retryable");
+    assert!(
+        !auth_err.is_retryable(),
+        "Auth required should not be auto-retryable"
+    );
     assert_eq!(auth_err.retry_after(), None, "Should not have retry_after");
 
     // HTTP 500 might be retryable depending on the error
     let server_err = EstError::server_error(500, "Internal Error".to_string());
-    assert!(!server_err.is_retryable(), "Server errors are not automatically retryable");
+    assert!(
+        !server_err.is_retryable(),
+        "Server errors are not automatically retryable"
+    );
 }
 
 #[tokio::test]
 async fn test_retry_after_zero_seconds() {
     // Test handling of Retry-After: 0 (retry immediately)
 
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     let mock = MockEstServer::start().await;
 
     Mock::given(method("POST"))
         .and(path("/.well-known/est/simpleenroll"))
-        .respond_with(
-            ResponseTemplate::new(202)
-                .insert_header("Retry-After", "0")
-        )
+        .respond_with(ResponseTemplate::new(202).insert_header("Retry-After", "0"))
         .mount(mock.inner())
         .await;
 
@@ -80,7 +95,9 @@ async fn test_retry_after_zero_seconds() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")
@@ -98,15 +115,17 @@ async fn test_retry_after_zero_seconds() {
 async fn test_retry_after_large_value() {
     // Test handling of very large Retry-After values
 
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     let mock = MockEstServer::start().await;
 
     Mock::given(method("POST"))
         .and(path("/.well-known/est/simpleenroll"))
         .respond_with(
-            ResponseTemplate::new(202)
-                .insert_header("Retry-After", "86400") // 24 hours
+            ResponseTemplate::new(202).insert_header("Retry-After", "86400"), // 24 hours
         )
         .mount(mock.inner())
         .await;
@@ -118,7 +137,9 @@ async fn test_retry_after_large_value() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")
@@ -136,16 +157,16 @@ async fn test_retry_after_large_value() {
 async fn test_malformed_retry_after_header() {
     // Test handling of invalid Retry-After values
 
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     let mock = MockEstServer::start().await;
 
     Mock::given(method("POST"))
         .and(path("/.well-known/est/simpleenroll"))
-        .respond_with(
-            ResponseTemplate::new(202)
-                .insert_header("Retry-After", "not-a-number")
-        )
+        .respond_with(ResponseTemplate::new(202).insert_header("Retry-After", "not-a-number"))
         .mount(mock.inner())
         .await;
 
@@ -156,7 +177,9 @@ async fn test_malformed_retry_after_header() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")
@@ -174,7 +197,10 @@ async fn test_http_date_retry_after() {
     // RFC 7231 allows Retry-After to be an HTTP-date instead of seconds
     // e.g., "Retry-After: Fri, 31 Dec 2024 23:59:59 GMT"
 
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     let mock = MockEstServer::start().await;
 
@@ -182,7 +208,7 @@ async fn test_http_date_retry_after() {
         .and(path("/.well-known/est/simpleenroll"))
         .respond_with(
             ResponseTemplate::new(202)
-                .insert_header("Retry-After", "Wed, 21 Oct 2025 07:28:00 GMT")
+                .insert_header("Retry-After", "Wed, 21 Oct 2025 07:28:00 GMT"),
         )
         .mount(mock.inner())
         .await;
@@ -194,7 +220,9 @@ async fn test_http_date_retry_after() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")

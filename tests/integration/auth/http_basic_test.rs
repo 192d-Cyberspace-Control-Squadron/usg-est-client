@@ -1,8 +1,8 @@
 //! Integration tests for HTTP Basic authentication
 
-use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_successful_http_basic_auth() {
@@ -23,7 +23,9 @@ async fn test_successful_http_basic_auth() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -59,7 +61,9 @@ async fn test_invalid_credentials() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -96,7 +100,9 @@ async fn test_missing_authorization_header() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -167,7 +173,10 @@ async fn test_special_characters_in_credentials() {
         .trust_any_insecure()
         .build();
 
-    assert!(config.is_ok(), "Should handle special characters in credentials");
+    assert!(
+        config.is_ok(),
+        "Should handle special characters in credentials"
+    );
 
     // Special characters like : and @ should be properly encoded
     let auth = config.unwrap().http_auth.unwrap();

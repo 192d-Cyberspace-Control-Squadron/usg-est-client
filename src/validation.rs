@@ -248,11 +248,7 @@ impl CertificateValidator {
     }
 
     /// Find the issuer of a certificate in the provided set.
-    fn find_issuer(
-        &self,
-        cert: &Certificate,
-        candidates: &[Certificate],
-    ) -> Option<Certificate> {
+    fn find_issuer(&self, cert: &Certificate, candidates: &[Certificate]) -> Option<Certificate> {
         let issuer_dn = &cert.tbs_certificate.issuer;
 
         for candidate in candidates {

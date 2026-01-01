@@ -1,7 +1,7 @@
 //! Integration tests for protocol error handling
 
-use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 use crate::integration::MockEstServer;
+use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_invalid_content_type() {
@@ -9,7 +9,8 @@ async fn test_invalid_content_type() {
     let mock = MockEstServer::start().await;
 
     // Mock response with wrong content type
-    mock.mock_invalid_content_type("/.well-known/est/cacerts").await;
+    mock.mock_invalid_content_type("/.well-known/est/cacerts")
+        .await;
 
     // Create EST client
     let config = EstClientConfig::builder()
@@ -19,7 +20,9 @@ async fn test_invalid_content_type() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CA certs with invalid content type
     let result = client.get_ca_certs().await;
@@ -29,9 +32,9 @@ async fn test_invalid_content_type() {
     assert!(result.is_err(), "Should reject invalid content type");
     let err = result.unwrap_err();
     assert!(
-        matches!(err, usg_est_client::EstError::InvalidContentType { .. }) ||
-        matches!(err, usg_est_client::EstError::Base64(_)) ||
-        matches!(err, usg_est_client::EstError::CmsParsing(_)),
+        matches!(err, usg_est_client::EstError::InvalidContentType { .. })
+            || matches!(err, usg_est_client::EstError::Base64(_))
+            || matches!(err, usg_est_client::EstError::CmsParsing(_)),
         "Expected InvalidContentType, Base64, or CmsParsing error, got: {:?}",
         err
     );
@@ -44,7 +47,10 @@ async fn test_missing_required_headers() {
 
     // Mock pending response without Retry-After header
     // (This would be a protocol violation)
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     Mock::given(method("POST"))
         .and(path("/.well-known/est/simpleenroll"))
@@ -60,7 +66,9 @@ async fn test_missing_required_headers() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")
@@ -80,7 +88,8 @@ async fn test_malformed_response_bodies() {
     let mock = MockEstServer::start().await;
 
     // Mock with invalid base64
-    mock.mock_malformed_body("/.well-known/est/cacerts", "application/pkcs7-mime").await;
+    mock.mock_malformed_body("/.well-known/est/cacerts", "application/pkcs7-mime")
+        .await;
 
     // Create EST client
     let config = EstClientConfig::builder()
@@ -90,7 +99,9 @@ async fn test_malformed_response_bodies() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Test: Get CA certs with malformed body
     let result = client.get_ca_certs().await;
@@ -110,7 +121,10 @@ async fn test_unexpected_http_methods() {
 
 #[tokio::test]
 async fn test_http_status_code_handling() {
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     // Start mock server
     let mock = MockEstServer::start().await;
@@ -131,7 +145,9 @@ async fn test_http_status_code_handling() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let (csr_der, _key_pair) = CsrBuilder::new()
         .common_name("test.example.com")
@@ -152,7 +168,10 @@ async fn test_http_status_code_handling() {
 
 #[tokio::test]
 async fn test_empty_response_body() {
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     // Start mock server
     let mock = MockEstServer::start().await;
@@ -163,7 +182,7 @@ async fn test_empty_response_body() {
         .respond_with(
             ResponseTemplate::new(200)
                 .set_body_string("")
-                .insert_header("Content-Type", "application/pkcs7-mime")
+                .insert_header("Content-Type", "application/pkcs7-mime"),
         )
         .mount(mock.inner())
         .await;
@@ -175,7 +194,9 @@ async fn test_empty_response_body() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let result = client.get_ca_certs().await;
 
@@ -193,7 +214,10 @@ async fn test_oversized_response() {
 
 #[tokio::test]
 async fn test_redirect_handling() {
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     // Start mock server
     let mock = MockEstServer::start().await;
@@ -203,7 +227,7 @@ async fn test_redirect_handling() {
         .and(path("/.well-known/est/cacerts"))
         .respond_with(
             ResponseTemplate::new(302)
-                .insert_header("Location", "https://other.example.com/cacerts")
+                .insert_header("Location", "https://other.example.com/cacerts"),
         )
         .mount(mock.inner())
         .await;
@@ -215,7 +239,9 @@ async fn test_redirect_handling() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let result = client.get_ca_certs().await;
 
@@ -235,7 +261,10 @@ async fn test_content_encoding_handling() {
 
 #[tokio::test]
 async fn test_missing_content_type_header() {
-    use wiremock::{Mock, ResponseTemplate, matchers::{method, path}};
+    use wiremock::{
+        matchers::{method, path},
+        Mock, ResponseTemplate,
+    };
 
     // Start mock server
     let mock = MockEstServer::start().await;
@@ -244,9 +273,7 @@ async fn test_missing_content_type_header() {
     Mock::given(method("GET"))
         .and(path("/.well-known/est/cacerts"))
         .respond_with(
-            ResponseTemplate::new(200)
-                .set_body_string("some data")
-                // No Content-Type header
+            ResponseTemplate::new(200).set_body_string("some data"), // No Content-Type header
         )
         .mount(mock.inner())
         .await;
@@ -258,7 +285,9 @@ async fn test_missing_content_type_header() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     let result = client.get_ca_certs().await;
 

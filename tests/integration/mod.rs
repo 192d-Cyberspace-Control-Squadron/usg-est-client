@@ -76,8 +76,7 @@ impl MockEstServer {
         Mock::given(method("POST"))
             .and(path(PATH_SIMPLEENROLL))
             .respond_with(
-                ResponseTemplate::new(202)
-                    .insert_header("Retry-After", retry_after.to_string()),
+                ResponseTemplate::new(202).insert_header("Retry-After", retry_after.to_string()),
             )
             .mount(&self.server)
             .await;
@@ -88,8 +87,7 @@ impl MockEstServer {
         Mock::given(method("POST"))
             .and(path(PATH_SIMPLEENROLL))
             .respond_with(
-                ResponseTemplate::new(401)
-                    .insert_header("WWW-Authenticate", "Basic realm=\"EST\""),
+                ResponseTemplate::new(401).insert_header("WWW-Authenticate", "Basic realm=\"EST\""),
             )
             .mount(&self.server)
             .await;
@@ -168,7 +166,10 @@ impl MockEstServer {
             .respond_with(
                 ResponseTemplate::new(200)
                     .set_body_string(cmc_response_base64)
-                    .insert_header("Content-Type", "application/pkcs7-mime; smime-type=CMC-response")
+                    .insert_header(
+                        "Content-Type",
+                        "application/pkcs7-mime; smime-type=CMC-response",
+                    )
                     .insert_header("Content-Transfer-Encoding", "base64"),
             )
             .mount(&self.server)

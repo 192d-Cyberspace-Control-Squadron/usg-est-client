@@ -198,8 +198,7 @@ pub fn decrypt_enveloped_data(
     let content_key = decrypt_content_key(&envelope, decryption_key)?;
 
     // Step 3: Decrypt the actual content using the content encryption key
-    let decrypted_content =
-        decrypt_content(&envelope.encrypted_content, &content_key, &envelope)?;
+    let decrypted_content = decrypt_content(&envelope.encrypted_content, &content_key, &envelope)?;
 
     debug!(
         "Successfully decrypted EnvelopedData ({} bytes)",
@@ -240,7 +239,9 @@ fn decrypt_content(
     // 4. Removing PKCS#7 padding
 
     debug!("Content decryption not yet implemented (placeholder)");
-    Err(EstError::operational("Content decryption not yet implemented"))
+    Err(EstError::operational(
+        "Content decryption not yet implemented",
+    ))
 }
 
 /// Check if private key data is encrypted (EnvelopedData).

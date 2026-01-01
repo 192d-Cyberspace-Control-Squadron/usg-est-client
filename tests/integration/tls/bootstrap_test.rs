@@ -1,8 +1,8 @@
 //! Integration tests for bootstrap/TOFU mode
 
-use usg_est_client::bootstrap::BootstrapClient;
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::bootstrap::BootstrapClient;
 
 #[tokio::test]
 async fn test_bootstrap_mode_ca_cert_retrieval() {
@@ -15,15 +15,17 @@ async fn test_bootstrap_mode_ca_cert_retrieval() {
     mock.mock_cacerts(&ca_certs_base64).await;
 
     // Create bootstrap client
-    let bootstrap = BootstrapClient::new(&mock.url())
-        .expect("Bootstrap client creation failed");
+    let bootstrap = BootstrapClient::new(&mock.url()).expect("Bootstrap client creation failed");
 
     // Test: Fetch CA certs without verification (TOFU)
     let result = bootstrap.fetch_ca_certs().await;
 
     // Note: May fail due to PKCS#7 format issues, but demonstrates the API
     if result.is_err() {
-        eprintln!("Bootstrap fetch skipped due to fixture format: {:?}", result.err());
+        eprintln!(
+            "Bootstrap fetch skipped due to fixture format: {:?}",
+            result.err()
+        );
         return;
     }
 
@@ -41,40 +43,49 @@ async fn test_bootstrap_mode_ca_cert_retrieval() {
 #[tokio::test]
 async fn test_fingerprint_computation() {
     // Load a test certificate
-    let cert_pem = fs::read("tests/fixtures/certs/ca.pem")
-        .expect("Failed to load CA cert");
+    let cert_pem = fs::read("tests/fixtures/certs/ca.pem").expect("Failed to load CA cert");
 
     // Parse the certificate
     use der::Decode;
     let pem_str = std::str::from_utf8(&cert_pem).expect("Invalid UTF-8");
-    let begin = pem_str.find("-----BEGIN CERTIFICATE-----").expect("No BEGIN marker");
-    let end = pem_str.find("-----END CERTIFICATE-----").expect("No END marker");
+    let begin = pem_str
+        .find("-----BEGIN CERTIFICATE-----")
+        .expect("No BEGIN marker");
+    let end = pem_str
+        .find("-----END CERTIFICATE-----")
+        .expect("No END marker");
     let b64 = &pem_str[begin + 27..end];
     let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
 
     use base64::prelude::*;
-    let der = BASE64_STANDARD.decode(b64_clean).expect("Base64 decode failed");
+    let der = BASE64_STANDARD
+        .decode(b64_clean)
+        .expect("Base64 decode failed");
     let cert = usg_est_client::Certificate::from_der(&der).expect("DER decode failed");
 
     // Compute fingerprint
-    let fingerprint = BootstrapClient::compute_fingerprint(&cert).expect("Fingerprint computation failed");
+    let fingerprint =
+        BootstrapClient::compute_fingerprint(&cert).expect("Fingerprint computation failed");
 
     // Fingerprint should be 32 bytes (SHA-256)
     assert_eq!(fingerprint.len(), 32, "Fingerprint should be 32 bytes");
 
     // Fingerprint should be deterministic
-    let fingerprint2 = BootstrapClient::compute_fingerprint(&cert).expect("Fingerprint computation failed");
-    assert_eq!(fingerprint, fingerprint2, "Fingerprint should be deterministic");
+    let fingerprint2 =
+        BootstrapClient::compute_fingerprint(&cert).expect("Fingerprint computation failed");
+    assert_eq!(
+        fingerprint, fingerprint2,
+        "Fingerprint should be deterministic"
+    );
 }
 
 #[tokio::test]
 async fn test_fingerprint_formatting() {
     // Create a test fingerprint
     let fingerprint: [u8; 32] = [
-        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-        0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-        0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17,
-        0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D, 0x1E, 0x1F,
+        0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E,
+        0x0F, 0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1A, 0x1B, 0x1C, 0x1D,
+        0x1E, 0x1F,
     ];
 
     // Format fingerprint
@@ -82,11 +93,7 @@ async fn test_fingerprint_formatting() {
 
     // Should be in "XX:XX:XX:..." format
     assert!(formatted.contains(':'), "Should contain colons");
-    assert_eq!(
-        formatted.split(':').count(),
-        32,
-        "Should have 32 hex pairs"
-    );
+    assert_eq!(formatted.split(':').count(), 32, "Should have 32 hex pairs");
 
     // Should start with "00:01:02:03"
     assert!(
@@ -128,7 +135,9 @@ async fn test_fingerprint_parsing_invalid() {
     assert!(result.is_err(), "Should reject invalid hex");
 
     // Wrong format (no colons)
-    let result = BootstrapClient::parse_fingerprint("ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789");
+    let result = BootstrapClient::parse_fingerprint(
+        "ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789ABCDEF0123456789",
+    );
     assert!(result.is_err(), "Should reject wrong format");
 }
 
@@ -138,16 +147,17 @@ async fn test_fingerprint_verification_callback() {
 
     // Create a verification callback
     let expected_fp = [0u8; 32];
-    let verifier = Arc::new(move |fp: &[u8; 32]| -> bool {
-        fp == &expected_fp
-    });
+    let verifier = Arc::new(move |fp: &[u8; 32]| -> bool { fp == &expected_fp });
 
     // Test with matching fingerprint
     assert!(verifier(&expected_fp), "Should accept matching fingerprint");
 
     // Test with non-matching fingerprint
     let different_fp = [1u8; 32];
-    assert!(!verifier(&different_fp), "Should reject different fingerprint");
+    assert!(
+        !verifier(&different_fp),
+        "Should reject different fingerprint"
+    );
 }
 
 #[tokio::test]
@@ -165,13 +175,15 @@ async fn test_tofu_flow_end_to_end() {
     mock.mock_cacerts(&ca_certs_base64).await;
 
     // Step 1: Bootstrap - fetch CA certs
-    let bootstrap = BootstrapClient::new(&mock.url())
-        .expect("Bootstrap client creation failed");
+    let bootstrap = BootstrapClient::new(&mock.url()).expect("Bootstrap client creation failed");
 
     let fetch_result = bootstrap.fetch_ca_certs().await;
 
     if fetch_result.is_err() {
-        eprintln!("TOFU test skipped due to fixture format: {:?}", fetch_result.err());
+        eprintln!(
+            "TOFU test skipped due to fixture format: {:?}",
+            fetch_result.err()
+        );
         return;
     }
 
@@ -211,19 +223,24 @@ async fn test_tofu_flow_end_to_end() {
 #[tokio::test]
 async fn test_get_subject_cn() {
     // Load a test certificate
-    let cert_pem = fs::read("tests/fixtures/certs/ca.pem")
-        .expect("Failed to load CA cert");
+    let cert_pem = fs::read("tests/fixtures/certs/ca.pem").expect("Failed to load CA cert");
 
     // Parse the certificate
     use der::Decode;
     let pem_str = std::str::from_utf8(&cert_pem).expect("Invalid UTF-8");
-    let begin = pem_str.find("-----BEGIN CERTIFICATE-----").expect("No BEGIN marker");
-    let end = pem_str.find("-----END CERTIFICATE-----").expect("No END marker");
+    let begin = pem_str
+        .find("-----BEGIN CERTIFICATE-----")
+        .expect("No BEGIN marker");
+    let end = pem_str
+        .find("-----END CERTIFICATE-----")
+        .expect("No END marker");
     let b64 = &pem_str[begin + 27..end];
     let b64_clean: String = b64.chars().filter(|c| !c.is_whitespace()).collect();
 
     use base64::prelude::*;
-    let der = BASE64_STANDARD.decode(b64_clean).expect("Base64 decode failed");
+    let der = BASE64_STANDARD
+        .decode(b64_clean)
+        .expect("Base64 decode failed");
     let cert = usg_est_client::Certificate::from_der(&der).expect("DER decode failed");
 
     // Get subject CN

@@ -34,30 +34,21 @@ pub fn generate_all_fixtures() -> Result<(), Box<dyn std::error::Error>> {
     let certs = generate_test_certs()?;
 
     // Save CA certificate and key
-    fs::write(
-        base_dir.join("certs/ca.pem"),
-        certs.ca_cert.pem(),
-    )?;
+    fs::write(base_dir.join("certs/ca.pem"), certs.ca_cert.pem())?;
     fs::write(
         base_dir.join("certs/ca-key.pem"),
         certs.ca_key.serialize_pem(),
     )?;
 
     // Save client certificate and key
-    fs::write(
-        base_dir.join("certs/client.pem"),
-        certs.client_cert.pem(),
-    )?;
+    fs::write(base_dir.join("certs/client.pem"), certs.client_cert.pem())?;
     fs::write(
         base_dir.join("certs/client-key.pem"),
         certs.client_key.serialize_pem(),
     )?;
 
     // Save server certificate and key
-    fs::write(
-        base_dir.join("certs/server.pem"),
-        certs.server_cert.pem(),
-    )?;
+    fs::write(base_dir.join("certs/server.pem"), certs.server_cert.pem())?;
     fs::write(
         base_dir.join("certs/server-key.pem"),
         certs.server_key.serialize_pem(),
@@ -121,7 +112,10 @@ fn generate_ca_cert() -> Result<(Certificate, KeyPair), Box<dyn std::error::Erro
     Ok((cert, key_pair))
 }
 
-fn generate_client_cert(ca: &Certificate, ca_key: &KeyPair) -> Result<(Certificate, KeyPair), Box<dyn std::error::Error>> {
+fn generate_client_cert(
+    ca: &Certificate,
+    ca_key: &KeyPair,
+) -> Result<(Certificate, KeyPair), Box<dyn std::error::Error>> {
     let mut params = CertificateParams::default();
 
     let mut dn = DistinguishedName::new();
@@ -129,18 +123,16 @@ fn generate_client_cert(ca: &Certificate, ca_key: &KeyPair) -> Result<(Certifica
     dn.push(DnType::OrganizationName, "EST Test Organization");
     params.distinguished_name = dn;
 
-    params.subject_alt_names = vec![
-        rcgen::SanType::DnsName(rcgen::Ia5String::try_from("test-client.example.com")?),
-    ];
+    params.subject_alt_names = vec![rcgen::SanType::DnsName(rcgen::Ia5String::try_from(
+        "test-client.example.com",
+    )?)];
 
     params.key_usages = vec![
         rcgen::KeyUsagePurpose::DigitalSignature,
         rcgen::KeyUsagePurpose::KeyEncipherment,
     ];
 
-    params.extended_key_usages = vec![
-        rcgen::ExtendedKeyUsagePurpose::ClientAuth,
-    ];
+    params.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ClientAuth];
 
     let key_pair = KeyPair::generate()?;
     let cert = params.signed_by(&key_pair, ca, ca_key)?;
@@ -148,7 +140,10 @@ fn generate_client_cert(ca: &Certificate, ca_key: &KeyPair) -> Result<(Certifica
     Ok((cert, key_pair))
 }
 
-fn generate_server_cert(ca: &Certificate, ca_key: &KeyPair) -> Result<(Certificate, KeyPair), Box<dyn std::error::Error>> {
+fn generate_server_cert(
+    ca: &Certificate,
+    ca_key: &KeyPair,
+) -> Result<(Certificate, KeyPair), Box<dyn std::error::Error>> {
     let mut params = CertificateParams::default();
 
     let mut dn = DistinguishedName::new();
@@ -156,18 +151,16 @@ fn generate_server_cert(ca: &Certificate, ca_key: &KeyPair) -> Result<(Certifica
     dn.push(DnType::OrganizationName, "EST Test Organization");
     params.distinguished_name = dn;
 
-    params.subject_alt_names = vec![
-        rcgen::SanType::DnsName(rcgen::Ia5String::try_from("est.example.com")?),
-    ];
+    params.subject_alt_names = vec![rcgen::SanType::DnsName(rcgen::Ia5String::try_from(
+        "est.example.com",
+    )?)];
 
     params.key_usages = vec![
         rcgen::KeyUsagePurpose::DigitalSignature,
         rcgen::KeyUsagePurpose::KeyEncipherment,
     ];
 
-    params.extended_key_usages = vec![
-        rcgen::ExtendedKeyUsagePurpose::ServerAuth,
-    ];
+    params.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ServerAuth];
 
     let key_pair = KeyPair::generate()?;
     let cert = params.signed_by(&key_pair, ca, ca_key)?;
@@ -175,25 +168,22 @@ fn generate_server_cert(ca: &Certificate, ca_key: &KeyPair) -> Result<(Certifica
     Ok((cert, key_pair))
 }
 
-fn generate_pkcs7_fixtures(certs: &TestCerts, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn generate_pkcs7_fixtures(
+    certs: &TestCerts,
+    base_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     // For now, we'll create a simple base64-encoded certificate as a placeholder
     // Real PKCS#7 generation would require the cms crate's builder API
 
     // Valid CA certs response (just the CA cert in PEM, base64 encoded)
     let ca_pem = certs.ca_cert.pem();
     let ca_base64 = BASE64_STANDARD.encode(ca_pem.as_bytes());
-    fs::write(
-        base_dir.join("pkcs7/valid-cacerts.b64"),
-        ca_base64,
-    )?;
+    fs::write(base_dir.join("pkcs7/valid-cacerts.b64"), ca_base64)?;
 
     // Valid enrollment response (client cert in PEM, base64 encoded)
     let client_pem = certs.client_cert.pem();
     let client_base64 = BASE64_STANDARD.encode(client_pem.as_bytes());
-    fs::write(
-        base_dir.join("pkcs7/valid-enroll.b64"),
-        client_base64,
-    )?;
+    fs::write(base_dir.join("pkcs7/valid-enroll.b64"), client_base64)?;
 
     // Empty PKCS#7 structure for error testing
     let empty_pkcs7 = vec![
@@ -210,7 +200,10 @@ fn generate_pkcs7_fixtures(certs: &TestCerts, base_dir: &Path) -> Result<(), Box
     Ok(())
 }
 
-fn generate_multipart_fixtures(certs: &TestCerts, base_dir: &Path) -> Result<(), Box<dyn std::error::Error>> {
+fn generate_multipart_fixtures(
+    certs: &TestCerts,
+    base_dir: &Path,
+) -> Result<(), Box<dyn std::error::Error>> {
     let boundary = "----=_Part_0_123456789.123456789";
 
     let cert_pem = certs.client_cert.pem();
@@ -238,17 +231,11 @@ fn generate_multipart_fixtures(certs: &TestCerts, base_dir: &Path) -> Result<(),
         multipart_body,
     )?;
 
-    fs::write(
-        base_dir.join("multipart/boundary.txt"),
-        boundary,
-    )?;
+    fs::write(base_dir.join("multipart/boundary.txt"), boundary)?;
 
     // Malformed multipart (missing boundary)
     let malformed = "Content-Type: application/pkcs7-mime\r\nsome data\r\n";
-    fs::write(
-        base_dir.join("multipart/malformed.txt"),
-        malformed,
-    )?;
+    fs::write(base_dir.join("multipart/malformed.txt"), malformed)?;
 
     Ok(())
 }
@@ -261,10 +248,7 @@ fn generate_malformed_fixtures(base_dir: &Path) -> Result<(), Box<dyn std::error
     )?;
 
     // Empty file
-    fs::write(
-        base_dir.join("pkcs7/empty.txt"),
-        "",
-    )?;
+    fs::write(base_dir.join("pkcs7/empty.txt"), "")?;
 
     // Generate CSR attributes fixture
     // SEQUENCE containing one OID: challengePassword (1.2.840.113549.1.9.7)

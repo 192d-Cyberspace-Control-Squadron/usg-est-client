@@ -1,8 +1,8 @@
 //! Integration tests for TLS client certificate authentication
 
-use usg_est_client::{EstClient, EstClientConfig, ClientIdentity, csr::CsrBuilder};
 use crate::integration::MockEstServer;
 use std::fs;
+use usg_est_client::{csr::CsrBuilder, ClientIdentity, EstClient, EstClientConfig};
 
 #[tokio::test]
 async fn test_successful_tls_client_cert_auth() {
@@ -15,10 +15,10 @@ async fn test_successful_tls_client_cert_auth() {
     mock.mock_reenroll_success(&cert_pkcs7_base64).await;
 
     // Load client certificate and key
-    let client_cert_pem = fs::read("tests/fixtures/certs/client.pem")
-        .expect("Failed to load client cert");
-    let client_key_pem = fs::read("tests/fixtures/certs/client-key.pem")
-        .expect("Failed to load client key");
+    let client_cert_pem =
+        fs::read("tests/fixtures/certs/client.pem").expect("Failed to load client cert");
+    let client_key_pem =
+        fs::read("tests/fixtures/certs/client-key.pem").expect("Failed to load client key");
 
     // Create EST client with TLS client certificate
     let config = EstClientConfig::builder()
@@ -29,7 +29,9 @@ async fn test_successful_tls_client_cert_auth() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -44,7 +46,10 @@ async fn test_successful_tls_client_cert_auth() {
     // the client can be configured with them
     if result.is_ok() || result.is_err() {
         // Either outcome is acceptable - we're testing configuration, not server behavior
-        assert!(true, "Client successfully configured with TLS client certificate");
+        assert!(
+            true,
+            "Client successfully configured with TLS client certificate"
+        );
     }
 }
 
@@ -65,7 +70,9 @@ async fn test_missing_client_certificate() {
         .build()
         .expect("Valid config");
 
-    let client = EstClient::new(config).await.expect("Client creation failed");
+    let client = EstClient::new(config)
+        .await
+        .expect("Client creation failed");
 
     // Generate CSR
     let (csr_der, _key_pair) = CsrBuilder::new()
@@ -98,7 +105,10 @@ async fn test_invalid_client_certificate() {
     let config_result = EstClientConfig::builder()
         .server_url(&mock.url())
         .expect("Valid URL")
-        .client_identity(ClientIdentity::new(invalid_cert.to_vec(), invalid_key.to_vec()))
+        .client_identity(ClientIdentity::new(
+            invalid_cert.to_vec(),
+            invalid_key.to_vec(),
+        ))
         .trust_any_insecure()
         .build();
 
@@ -112,9 +122,7 @@ async fn test_invalid_client_certificate() {
         // Expected - invalid cert/key should cause TLS error
         let err_msg = client_result.unwrap_err().to_string();
         assert!(
-            err_msg.contains("TLS") ||
-            err_msg.contains("certificate") ||
-            err_msg.contains("key"),
+            err_msg.contains("TLS") || err_msg.contains("certificate") || err_msg.contains("key"),
             "Should fail with TLS/certificate/key error"
         );
     }
@@ -130,10 +138,10 @@ async fn test_certificate_chain_validation() {
     mock.mock_reenroll_success(&cert_pkcs7_base64).await;
 
     // Load client cert (which is signed by our CA)
-    let client_cert_pem = fs::read("tests/fixtures/certs/client.pem")
-        .expect("Failed to load client cert");
-    let client_key_pem = fs::read("tests/fixtures/certs/client-key.pem")
-        .expect("Failed to load client key");
+    let client_cert_pem =
+        fs::read("tests/fixtures/certs/client.pem").expect("Failed to load client cert");
+    let client_key_pem =
+        fs::read("tests/fixtures/certs/client-key.pem").expect("Failed to load client key");
 
     // Create EST client with client cert
     let config = EstClientConfig::builder()
@@ -147,5 +155,8 @@ async fn test_certificate_chain_validation() {
     let client = EstClient::new(config).await;
 
     // Verify client can be created with valid certificate chain
-    assert!(client.is_ok(), "Client creation should succeed with valid cert chain");
+    assert!(
+        client.is_ok(),
+        "Client creation should succeed with valid cert chain"
+    );
 }
