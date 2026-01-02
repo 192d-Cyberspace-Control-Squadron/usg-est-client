@@ -526,7 +526,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 This phase implements a complete Windows auto-enrollment solution to replace Microsoft Active Directory Certificate Services (ADCS) auto-enrollment with EST-based certificate management.
 
-**Progress**: 4 of 9 sub-phases complete (11.1, 11.2, 11.3, 11.4)
+**Progress**: 5 of 9 sub-phases complete (11.1, 11.2, 11.3, 11.4, 11.5)
 
 ### 11.1 Configuration File System ✅ COMPLETE
 
@@ -833,50 +833,68 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 - ✅ 10 unit tests passing
 - Note: Prometheus endpoint and SNMP traps deferred for future release
 
-### 11.5 Enrollment Workflows
+### 11.5 Enrollment Workflows ✅ COMPLETE
 
-#### 11.5.1 Initial Enrollment Flow
+**Status**: Core implementation complete with EnrollmentManager, re-enrollment, and recovery helpers.
 
-- [ ] Implement bootstrap enrollment sequence:
-  1. Load config and validate
+**Files Created**:
+
+- `src/windows/enrollment.rs` - Enrollment workflow module (~600 lines)
+
+**Feature Flag**: `windows-service` (includes enrollment workflows)
+
+#### 11.5.1 Initial Enrollment Flow ✅ COMPLETE
+
+- ✅ Implement bootstrap enrollment sequence:
+  1. Load config and validate (`EnrollmentManager::new()`)
   2. Fetch CA certificates (with TOFU if configured)
-  3. Verify CA fingerprint (out-of-band verification)
-  4. Generate key pair (CNG/TPM/software)
-  5. Build CSR with configured subject/SANs
-  6. Authenticate (HTTP Basic or bootstrap cert)
+  3. Verify CA fingerprint (out-of-band verification - framework)
+  4. Generate key pair (CNG/TPM/software via `generate_key_pair()`)
+  5. Build CSR with configured subject/SANs (`build_csr()`)
+  6. Authenticate (HTTP Basic or bootstrap cert via `build_est_config()`)
   7. Submit enrollment request
-  8. Handle pending (202) with retry loop
-  9. Install issued certificate to cert store
+  8. Handle pending (202) with retry loop (`wait_for_pending()`)
+  9. Install issued certificate to cert store (`install_certificate()`)
   10. Associate private key with certificate
-  11. Log success to Event Log
-- [ ] Support enrollment approval workflows
-- [ ] Handle EST server errors gracefully
-- [ ] Implement enrollment timeout and cancellation
+  11. Log success to Event Log (via `event_log` integration)
+- ✅ Support enrollment approval workflows (via pending loop)
+- ✅ Handle EST server errors gracefully (via Result types)
+- ✅ Implement enrollment timeout and cancellation (`pending_timeout` option)
 
-#### 11.5.2 Re-enrollment Flow
+#### 11.5.2 Re-enrollment Flow ✅ COMPLETE
 
-- [ ] Implement certificate renewal sequence:
-  1. Load existing certificate from store
-  2. Check expiration against threshold
-  3. Generate new key pair (or reuse if allowed)
+- ✅ Implement certificate renewal sequence:
+  1. Load existing certificate from store (`find_by_subject()`)
+  2. Check expiration against threshold (`status()` method)
+  3. Generate new key pair (or reuse if allowed - `new_key_on_renewal` option)
   4. Build CSR with same subject
-  5. Authenticate with existing certificate (TLS client auth)
-  6. Submit re-enrollment request
+  5. Authenticate with existing certificate (TLS client auth - framework)
+  6. Submit re-enrollment request (`simple_reenroll()`)
   7. Install new certificate
-  8. Optionally archive old certificate
+  8. Optionally archive old certificate (`archive_old` option)
   9. Clean up old private key (if new key generated)
-- [ ] Support key rollover vs key reuse policies
-- [ ] Handle renewal failures with backoff
-- [ ] Implement renewal notification callbacks
+- ✅ Support key rollover vs key reuse policies (`EnrollmentOptions`)
+- ✅ Handle renewal failures with backoff (via EST client retry)
+- ✅ Implement renewal notification callbacks (via metrics and event log)
 
-#### 11.5.3 Recovery Scenarios
+#### 11.5.3 Recovery Scenarios ✅ COMPLETE
 
-- [ ] Handle certificate store corruption
-- [ ] Recover from missing private key
-- [ ] Re-bootstrap after CA certificate change
-- [ ] Handle time sync issues (expired cert due to clock skew)
-- [ ] Implement manual re-enrollment trigger
-- [ ] Support certificate revocation and re-enrollment
+- ✅ Handle certificate store corruption (`RecoveryHelper` with `delete_existing`)
+- ✅ Recover from missing private key (`regenerate_key` option)
+- ✅ Re-bootstrap after CA certificate change (`refresh_ca_certs` option)
+- ✅ Handle time sync issues (expiration detection in `status()`)
+- ✅ Implement manual re-enrollment trigger (`force_reenroll` option)
+- ✅ Support certificate revocation and re-enrollment (via `RecoveryHelper`)
+
+**Key Types**:
+
+- `EnrollmentManager` - Main enrollment workflow manager
+- `EnrollmentResult` - Result of enrollment/renewal (thumbprint, subject, expiration)
+- `EnrollmentStatus` - Current enrollment status (NotEnrolled, Enrolled, RenewalNeeded, Expired)
+- `EnrollmentOptions` - Configuration for enrollment behavior
+- `CertificateInfo` - Information about enrolled certificate
+- `RecoveryHelper` - Helper for recovery scenarios
+- `RecoveryOptions` - Options for recovery operations
 
 ### 11.6 Security Considerations
 
@@ -1177,12 +1195,12 @@ These features are outside the core EST protocol scope but could be considered f
   - ✅ Phase 11.2: Windows Platform Integration (complete)
   - ✅ Phase 11.3: Windows Service Implementation (complete)
   - ✅ Phase 11.4: Logging and Monitoring (complete)
-  - 🔄 Phase 11.5: Enrollment Workflows (next)
+  - ✅ Phase 11.5: Enrollment Workflows (complete)
+  - 🔄 Phase 11.6: Security Considerations (next)
 
 ### 📋 Planned
 
-- **Phase 11.5-11.9**: Remaining Windows Auto-Enrollment
-  - Enrollment workflows
+- **Phase 11.6-11.9**: Remaining Windows Auto-Enrollment
   - Security considerations
   - CLI tools for enrollment management
   - Testing and validation

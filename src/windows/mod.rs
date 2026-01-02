@@ -90,6 +90,9 @@ pub mod perfcounter;
 #[cfg(feature = "windows-service")]
 pub mod service;
 
+#[cfg(feature = "windows-service")]
+pub mod enrollment;
+
 pub use certstore::{CertStore, CertStoreLocation, StoredCertificate};
 pub use cng::CngKeyProvider;
 pub use identity::MachineIdentity;
@@ -103,6 +106,12 @@ pub use perfcounter::{CounterType, PerformanceCounters, ServiceStateCounter};
 
 #[cfg(feature = "windows-service")]
 pub use service::{EnrollmentService, ServiceConfig, ServiceState, ServiceStateValue};
+
+#[cfg(feature = "windows-service")]
+pub use enrollment::{
+    CertificateInfo, EnrollmentManager, EnrollmentOptions, EnrollmentResult, EnrollmentStatus,
+    RecoveryHelper, RecoveryOptions,
+};
 
 use crate::error::{EstError, Result};
 
