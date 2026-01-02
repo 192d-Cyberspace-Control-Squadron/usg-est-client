@@ -363,7 +363,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Add configurable renewal threshold (e.g., 30 days before expiry)
 - ✅ Implement retry logic for failed renewals (exponential backoff)
 - ✅ Add renewal event callbacks
-- ⚠️  Create renewal example (`examples/auto_renewal.rs`) - TODO
+- ✅ Create renewal example (`examples/auto_renewal.rs`)
 - ⚠️  Document renewal behavior in `docs/operations.md` - TODO
 - ⚠️  Integrate proper datetime library for time parsing - TODO
 
@@ -376,9 +376,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Research OCSP (Online Certificate Status Protocol)
 - ✅ Implement OCSP request/response framework (`src/revocation.rs`)
 - ✅ Add revocation checking API to certificate validation
+- ✅ Create revocation example (`examples/check_revocation.rs`)
 - ⚠️  Complete CRL parsing implementation (DER/PEM) - TODO
 - ⚠️  Complete OCSP request/response handling - TODO
-- ⚠️  Create revocation example (`examples/check_revocation.rs`) - TODO
 - ⚠️  Document revocation checking in `docs/security.md` - TODO
 
 #### 10.2.3 Hardware Security Module (HSM) Integration ✅ COMPLETE (Core Implementation)
@@ -389,8 +389,8 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Implement SoftwareKeyProvider for in-memory keys
 - ✅ Add KeyHandle, KeyAlgorithm, and KeyMetadata types
 - ✅ Add `hsm` feature flag to `Cargo.toml`
+- ✅ Create HSM example (`examples/hsm_enroll.rs`)
 - ⚠️  Implement HSM-backed CSR generation (needs CsrBuilder integration) - TODO
-- ⚠️  Create HSM example (`examples/hsm_enroll.rs`) - TODO
 - ⚠️  Document HSM usage in `docs/configuration.md` - TODO
 
 #### 10.2.4 PKCS#11 Support

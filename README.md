@@ -271,6 +271,9 @@ See the [`examples/`](examples/) directory for complete working examples:
 - `bootstrap.rs` - Bootstrap mode CA discovery
 - `reenroll.rs` - Certificate re-enrollment
 - `server_keygen.rs` - Server-side key generation
+- `auto_renewal.rs` - Automatic certificate renewal (requires `renewal` feature)
+- `check_revocation.rs` - Certificate revocation checking with CRL and OCSP (requires `revocation` feature)
+- `hsm_enroll.rs` - Hardware Security Module integration (requires `hsm` and `csr-gen` features)
 
 Run an example:
 
