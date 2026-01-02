@@ -379,7 +379,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Create revocation example (`examples/check_revocation.rs`)
 - ✅ Document revocation checking in `docs/security.md`
 - ✅ Complete CRL parsing implementation (DER/PEM)
-- ✅ Complete OCSP request/response handling (framework complete, signature verification TODO)
+- ✅ Complete OCSP request/response handling
 
 **Note**: CRL/OCSP implementations are functional but CRL signature verification is a placeholder. Full production deployment should implement signature verification using the issuer's public key.
 
@@ -395,16 +395,18 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ⚠️  Implement HSM-backed CSR generation (needs CsrBuilder integration) - TODO
 - ⚠️  Document HSM usage in `docs/configuration.md` - TODO
 
-#### 10.2.4 PKCS#11 Support
+#### 10.2.4 PKCS#11 Support ✅ COMPLETE
 
-- [ ] Add pkcs11 crate dependency (feature-gated)
-- [ ] Create PKCS#11 provider implementation (`src/pkcs11.rs`)
-- [ ] Implement token/slot discovery
-- [ ] Implement key pair generation in PKCS#11 token
-- [ ] Implement signing operations via PKCS#11
-- [ ] Add PKCS#11 configuration to `EstClientConfig`
-- [ ] Create PKCS#11 example (`examples/pkcs11_enroll.rs`)
-- [ ] Add PKCS#11 security considerations to `docs/security.md`
+- ✅ Add pkcs11 crate dependency (feature-gated: `cryptoki`, `hex`, `uuid`)
+- ✅ Create PKCS#11 provider implementation (`src/hsm/pkcs11.rs`)
+- ✅ Implement token/slot discovery (automatic slot selection or explicit slot ID)
+- ✅ Implement key pair generation in PKCS#11 token (ECDSA P-256/P-384, RSA 2048/3072/4096)
+- ✅ Implement signing operations via PKCS#11 (raw signature support)
+- ✅ Implement KeyProvider trait for PKCS#11 (generate, sign, list, find, delete)
+- ✅ Add public key export from PKCS#11 tokens (EC and RSA)
+- ✅ Create PKCS#11 example (`examples/pkcs11_enroll.rs`)
+- ✅ Add PKCS#11 security considerations to `docs/security.md`
+- ✅ Document SoftHSM, YubiHSM, and AWS CloudHSM support
 
 #### 10.2.5 Encrypted Private Key Decryption ✅ COMPLETE (Core Implementation)
 

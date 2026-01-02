@@ -294,17 +294,20 @@ let key_handle = provider
 #### PKCS#11 Security Benefits
 
 ✅ **Hardware Security Boundary:**
+
 - Private keys generated and stored within HSM
 - Keys marked as non-extractable (CKA_EXTRACTABLE=false)
 - Private key operations performed inside secure boundary
 - Protection against memory dumps and debugging attacks
 
 ✅ **Persistent Storage:**
+
 - Keys persist across application restarts
 - Token-based storage (CKA_TOKEN=true)
 - Keys survive process termination
 
 ✅ **Standards-Based:**
+
 - Industry-standard PKCS#11 (Cryptoki) interface
 - Works with multiple HSM vendors
 - Portable across different hardware
@@ -324,12 +327,14 @@ let provider = Pkcs11KeyProvider::new(lib, None, &pin)?;
 ```
 
 **Token Security:**
+
 - Physical security for hardware tokens required
 - Protect against unauthorized physical access
 - Consider tamper-evident seals for data center HSMs
 - Remote attestation for cloud HSMs
 
 **Session Management:**
+
 - Sessions automatically logged out on provider drop
 - Avoid long-lived sessions where possible
 - Monitor for session hijacking attempts
@@ -351,6 +356,7 @@ println!("Using token: {}", info.name);
 #### Supported PKCS#11 Implementations
 
 **Tested With:**
+
 - **SoftHSM 2.x**: Software HSM for development/testing
 - **YubiHSM 2**: Hardware HSM for production
 - **AWS CloudHSM**: Cloud-based HSM service
@@ -394,12 +400,14 @@ provider.delete_key(&handle).await?;
 ```
 
 ✅ **Monitoring:**
+
 - Log all HSM operations
 - Monitor for excessive failed PIN attempts
 - Alert on unexpected key generation/deletion
 - Track session creation/destruction
 
 ❌ **Avoid:**
+
 - Importing externally-generated keys when possible
 - Using default PINs (e.g., "0000", "1234")
 - Storing PINs in source code or config files

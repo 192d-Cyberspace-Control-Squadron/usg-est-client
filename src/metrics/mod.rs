@@ -18,6 +18,14 @@
 //! This module provides metrics collection for monitoring EST client
 //! operations, including operation counts, durations, and error rates.
 //!
+//! ## Exporters
+//!
+//! When the `metrics-prometheus` feature is enabled, this module also provides
+//! exporters for Prometheus and OpenTelemetry:
+//!
+//! - [`prometheus`] - Prometheus metrics exporter
+//! - [`opentelemetry`] - OpenTelemetry metrics exporter with Prometheus backend
+//!
 //! # Example
 //!
 //! ```no_run
@@ -39,6 +47,13 @@
 //! println!("Success rate: {:.2}%", summary.enrollments.success_rate());
 //! # }
 //! ```
+
+// Export Prometheus and OpenTelemetry modules when feature is enabled
+#[cfg(feature = "metrics-prometheus")]
+pub mod prometheus;
+
+#[cfg(feature = "metrics-prometheus")]
+pub mod opentelemetry;
 
 use std::sync::Arc;
 use std::time::Duration;
