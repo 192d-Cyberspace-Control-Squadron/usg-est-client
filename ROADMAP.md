@@ -300,10 +300,10 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 #### 10.1.4 Authentication Tests (`tests/integration/auth/`) ✅ COMPLETE
 
 - ✅ Create `tests/integration/auth/tls_client_cert_test.rs`
-  - [ ] Test successful TLS client cert auth
-  - [ ] Test missing client certificate
-  - [ ] Test invalid client certificate
-  - [ ] Test certificate chain validation
+  - ✅ Test successful TLS client cert auth
+  - ✅ Test missing client certificate
+  - ✅ Test invalid client certificate
+  - ✅ Test certificate chain validation
 - [ ] Create `tests/integration/auth/http_basic_test.rs`
   - [ ] Test successful HTTP Basic auth
   - [ ] Test invalid credentials
