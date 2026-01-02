@@ -48,11 +48,16 @@
 //! ```
 
 use crate::error::{EstError, Result};
+use base64::Engine;
+use der::Decode;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use x509_cert::crl::CertificateList;
+use x509_cert::ext::pkix::crl::dp::DistributionPoint;
+use x509_cert::ext::pkix::{AuthorityInfoAccessSyntax, CrlDistributionPoints};
 use x509_cert::Certificate;
 
 /// Configuration for revocation checking.
@@ -225,15 +230,13 @@ impl RevocationCheckResult {
 /// CRL cache entry.
 #[derive(Debug, Clone)]
 struct CrlCacheEntry {
-    /// The CRL data (placeholder - would be actual CRL structure).
-    #[allow(dead_code)]
-    data: Vec<u8>,
+    /// The parsed CRL.
+    crl: CertificateList,
 
     /// When this entry was cached.
     cached_at: SystemTime,
 
-    /// When this CRL expires.
-    #[allow(dead_code)]
+    /// When this CRL expires (from nextUpdate field).
     next_update: Option<SystemTime>,
 }
 
@@ -241,14 +244,22 @@ struct CrlCacheEntry {
 pub struct RevocationChecker {
     config: RevocationConfig,
     crl_cache: Arc<RwLock<HashMap<String, CrlCacheEntry>>>,
+    http_client: reqwest::Client,
 }
 
 impl RevocationChecker {
     /// Create a new revocation checker with the given configuration.
     pub fn new(config: RevocationConfig) -> Self {
+        // Create HTTP client with timeout
+        let http_client = reqwest::Client::builder()
+            .timeout(config.ocsp_timeout)
+            .build()
+            .unwrap_or_else(|_| reqwest::Client::new());
+
         Self {
             config,
             crl_cache: Arc::new(RwLock::new(HashMap::new())),
+            http_client,
         }
     }
 
@@ -336,7 +347,7 @@ impl RevocationChecker {
     async fn check_crl(
         &self,
         cert: &Certificate,
-        _issuer: &Certificate,
+        issuer: &Certificate,
     ) -> Result<RevocationStatus> {
         debug!("Performing CRL check");
 
@@ -350,21 +361,167 @@ impl RevocationChecker {
 
         for url in crl_urls {
             // Check cache first
-            if let Some(status) = self.check_crl_cache(&url).await? {
+            if let Some(status) = self.check_crl_cache(&url, cert, issuer).await? {
                 return Ok(status);
             }
 
             // Download and check CRL
-            // TODO: Implement actual CRL download and parsing
-            debug!("Would download CRL from: {}", url);
+            debug!("Downloading CRL from: {}", url);
+            match self.download_and_check_crl(&url, cert, issuer).await {
+                Ok(status) => return Ok(status),
+                Err(e) => {
+                    warn!("Failed to download/check CRL from {}: {}", url, e);
+                    // Continue to next URL
+                }
+            }
         }
 
         Ok(RevocationStatus::Unknown)
     }
 
+    /// Download CRL from URL and check certificate.
+    async fn download_and_check_crl(
+        &self,
+        url: &str,
+        cert: &Certificate,
+        issuer: &Certificate,
+    ) -> Result<RevocationStatus> {
+        // Download CRL
+        debug!("Fetching CRL from {}", url);
+        let response = self.http_client.get(url).send().await?;
+
+        if !response.status().is_success() {
+            return Err(EstError::protocol(format!(
+                "CRL download failed with status: {}",
+                response.status()
+            )));
+        }
+
+        let crl_data = response.bytes().await?;
+
+        // Parse CRL (try DER first, then PEM)
+        let crl = self.parse_crl(&crl_data)?;
+
+        // Verify CRL signature using issuer's public key
+        self.verify_crl_signature(&crl, issuer)?;
+
+        // Check if certificate is in the CRL
+        let status = self.check_cert_in_crl(cert, &crl)?;
+
+        // Cache the CRL
+        self.cache_crl(url, crl).await?;
+
+        Ok(status)
+    }
+
+    /// Parse CRL data (DER or PEM format).
+    fn parse_crl(&self, data: &[u8]) -> Result<CertificateList> {
+        // Try DER first
+        if let Ok(crl) = CertificateList::from_der(data) {
+            debug!("Parsed CRL as DER");
+            return Ok(crl);
+        }
+
+        // Try PEM
+        let pem_str = std::str::from_utf8(data)
+            .map_err(|_| EstError::protocol("CRL is not valid UTF-8 for PEM parsing"))?;
+
+        // Look for PEM boundaries
+        if let Some(pem_start) = pem_str.find("-----BEGIN X509 CRL-----") {
+            if let Some(pem_end) = pem_str.find("-----END X509 CRL-----") {
+                let pem_content = &pem_str[pem_start + 24..pem_end];
+                let cleaned_content = pem_content.replace(['\n', '\r', ' '], "");
+                let der_data = base64::engine::general_purpose::STANDARD
+                    .decode(cleaned_content)
+                    .map_err(|e| EstError::protocol(format!("Invalid base64 in PEM CRL: {}", e)))?;
+
+                let crl = CertificateList::from_der(&der_data)
+                    .map_err(|e| EstError::protocol(format!("Failed to parse PEM CRL: {}", e)))?;
+
+                debug!("Parsed CRL as PEM");
+                return Ok(crl);
+            }
+        }
+
+        Err(EstError::protocol("CRL is not valid DER or PEM format"))
+    }
+
+    /// Verify CRL signature using issuer's public key.
+    fn verify_crl_signature(&self, _crl: &CertificateList, _issuer: &Certificate) -> Result<()> {
+        // TODO: Implement actual signature verification
+        // This would require:
+        // 1. Extract public key from issuer certificate
+        // 2. Get signature algorithm from CRL
+        // 3. Verify signature using appropriate crypto library
+        //
+        // For now, we'll trust the CRL (not production-ready)
+        debug!("CRL signature verification (placeholder - not yet implemented)");
+        Ok(())
+    }
+
+    /// Check if certificate is revoked in CRL.
+    fn check_cert_in_crl(&self, cert: &Certificate, crl: &CertificateList) -> Result<RevocationStatus> {
+        let cert_serial = &cert.tbs_certificate.serial_number;
+
+        // Check if there are any revoked certificates
+        if let Some(revoked_certs) = &crl.tbs_cert_list.revoked_certificates {
+            for revoked_cert in revoked_certs.iter() {
+                if &revoked_cert.serial_number == cert_serial {
+                    debug!("Certificate found in CRL - REVOKED");
+                    return Ok(RevocationStatus::Revoked);
+                }
+            }
+        }
+
+        debug!("Certificate not found in CRL - VALID");
+        Ok(RevocationStatus::Valid)
+    }
+
+    /// Cache a CRL.
+    async fn cache_crl(&self, url: &str, crl: CertificateList) -> Result<()> {
+        let mut cache = self.crl_cache.write().await;
+
+        // Check cache size and evict oldest if needed
+        if cache.len() >= self.config.crl_cache_max_entries {
+            // Simple eviction: remove oldest entry
+            if let Some(oldest_key) = cache
+                .iter()
+                .min_by_key(|(_, entry)| entry.cached_at)
+                .map(|(k, _)| k.clone())
+            {
+                cache.remove(&oldest_key);
+                debug!("Evicted oldest CRL from cache");
+            }
+        }
+
+        // Parse nextUpdate time from CRL
+        let next_update = crl.tbs_cert_list.next_update.as_ref().and_then(|time| {
+            // Convert X.509 time to SystemTime
+            match time {
+                x509_cert::time::Time::UtcTime(utc) => {
+                    Some(SystemTime::UNIX_EPOCH + utc.to_unix_duration())
+                }
+                x509_cert::time::Time::GeneralTime(r#gen) => {
+                    Some(SystemTime::UNIX_EPOCH + r#gen.to_unix_duration())
+                }
+            }
+        });
+
+        let entry = CrlCacheEntry {
+            crl,
+            cached_at: SystemTime::now(),
+            next_update,
+        };
+
+        cache.insert(url.to_string(), entry);
+        debug!("Cached CRL for {}", url);
+
+        Ok(())
+    }
+
     /// Extract CRL distribution point URLs from a certificate.
     fn extract_crl_urls(&self, cert: &Certificate) -> Result<Vec<String>> {
-        let urls = Vec::new();
+        let mut urls = Vec::new();
 
         // Look for CRL Distribution Points extension
         if let Some(extensions) = &cert.tbs_certificate.extensions {
@@ -373,9 +530,22 @@ impl RevocationChecker {
                 let crl_dist_points_oid = const_oid::db::rfc5280::ID_CE_CRL_DISTRIBUTION_POINTS;
 
                 if ext.extn_id == crl_dist_points_oid {
-                    // TODO: Parse CRL Distribution Points extension
-                    // For now, return empty list
-                    debug!("Found CRL Distribution Points extension (parsing not implemented)");
+                    // Parse the CRL Distribution Points extension
+                    match CrlDistributionPoints::from_der(ext.extn_value.as_bytes()) {
+                        Ok(crl_dps) => {
+                            debug!("Parsed CRL Distribution Points extension");
+
+                            // Extract URLs from each distribution point
+                            for dp in crl_dps.0.iter() {
+                                if let Some(dist_point_urls) = self.extract_urls_from_dp(dp) {
+                                    urls.extend(dist_point_urls);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to parse CRL Distribution Points: {}", e);
+                        }
+                    }
                 }
             }
         }
@@ -383,8 +553,45 @@ impl RevocationChecker {
         Ok(urls)
     }
 
+    /// Extract URLs from a distribution point.
+    fn extract_urls_from_dp(&self, dp: &DistributionPoint) -> Option<Vec<String>> {
+        let mut urls = Vec::new();
+
+        if let Some(dist_point_name) = &dp.distribution_point {
+            // DistributionPointName is a choice between FullName and NameRelativeToCRLIssuer
+            // We're interested in FullName which contains GeneralNames
+            match dist_point_name {
+                x509_cert::ext::pkix::name::DistributionPointName::FullName(general_names) => {
+                    for general_name in general_names.iter() {
+                        // UniformResourceIdentifier is variant 6
+                        if let x509_cert::ext::pkix::name::GeneralName::UniformResourceIdentifier(uri) = general_name {
+                            if let Ok(url) = std::str::from_utf8(uri.as_bytes()) {
+                                debug!("Found CRL URL: {}", url);
+                                urls.push(url.to_string());
+                            }
+                        }
+                    }
+                }
+                _ => {
+                    debug!("Distribution point uses NameRelativeToCRLIssuer (not supported)");
+                }
+            }
+        }
+
+        if urls.is_empty() {
+            None
+        } else {
+            Some(urls)
+        }
+    }
+
     /// Check CRL cache for revocation status.
-    async fn check_crl_cache(&self, url: &str) -> Result<Option<RevocationStatus>> {
+    async fn check_crl_cache(
+        &self,
+        url: &str,
+        cert: &Certificate,
+        _issuer: &Certificate,
+    ) -> Result<Option<RevocationStatus>> {
         let cache = self.crl_cache.read().await;
 
         if let Some(entry) = cache.get(url) {
@@ -392,10 +599,18 @@ impl RevocationChecker {
                 .duration_since(entry.cached_at)
                 .unwrap_or(Duration::from_secs(0));
 
-            if age < self.config.crl_cache_duration {
+            // Check if cached CRL is still valid
+            let is_fresh = age < self.config.crl_cache_duration;
+            let not_expired = entry
+                .next_update
+                .map(|next| SystemTime::now() < next)
+                .unwrap_or(true);
+
+            if is_fresh && not_expired {
                 debug!("Using cached CRL for {}", url);
-                // TODO: Check certificate against cached CRL
-                return Ok(Some(RevocationStatus::Unknown));
+                // Check certificate against cached CRL
+                let status = self.check_cert_in_crl(cert, &entry.crl)?;
+                return Ok(Some(status));
             } else {
                 debug!("Cached CRL expired for {}", url);
             }
@@ -408,7 +623,7 @@ impl RevocationChecker {
     async fn check_ocsp(
         &self,
         cert: &Certificate,
-        _issuer: &Certificate,
+        issuer: &Certificate,
     ) -> Result<RevocationStatus> {
         debug!("Performing OCSP check");
 
@@ -416,13 +631,130 @@ impl RevocationChecker {
         let ocsp_url = self.extract_ocsp_url(cert)?;
 
         if let Some(url) = ocsp_url {
-            debug!("Would send OCSP request to: {}", url);
-            // TODO: Implement actual OCSP request/response
-            Ok(RevocationStatus::Unknown)
+            debug!("Sending OCSP request to: {}", url);
+
+            // Create OCSP request
+            let ocsp_request = self.create_ocsp_request(cert, issuer)?;
+
+            // Send OCSP request
+            match self.send_ocsp_request(&url, &ocsp_request).await {
+                Ok(status) => Ok(status),
+                Err(e) => {
+                    warn!("OCSP request failed: {}", e);
+                    Ok(RevocationStatus::Unknown)
+                }
+            }
         } else {
             debug!("No OCSP responder URL found in certificate");
             Ok(RevocationStatus::Unknown)
         }
+    }
+
+    /// Create an OCSP request for a certificate.
+    fn create_ocsp_request(&self, _cert: &Certificate, _issuer: &Certificate) -> Result<Vec<u8>> {
+        // TODO: Implement actual OCSP request creation
+        // OCSP Request structure (ASN.1):
+        // OCSPRequest ::= SEQUENCE {
+        //    tbsRequest      TBSRequest,
+        //    optionalSignature   [0] EXPLICIT Signature OPTIONAL }
+        //
+        // TBSRequest ::= SEQUENCE {
+        //    version             [0] EXPLICIT Version DEFAULT v1,
+        //    requestorName       [1] EXPLICIT GeneralName OPTIONAL,
+        //    requestList         SEQUENCE OF Request,
+        //    requestExtensions   [2] EXPLICIT Extensions OPTIONAL }
+        //
+        // Request ::= SEQUENCE {
+        //    reqCert                  CertID,
+        //    singleRequestExtensions  [0] EXPLICIT Extensions OPTIONAL }
+        //
+        // CertID ::= SEQUENCE {
+        //    hashAlgorithm       AlgorithmIdentifier,
+        //    issuerNameHash      OCTET STRING,
+        //    issuerKeyHash       OCTET STRING,
+        //    serialNumber        CertificateSerialNumber }
+        //
+        // For now, return a placeholder
+        debug!("OCSP request creation (placeholder - not yet fully implemented)");
+        Err(EstError::operational(
+            "OCSP request creation not yet implemented",
+        ))
+    }
+
+    /// Send OCSP request and parse response.
+    async fn send_ocsp_request(&self, url: &str, request: &[u8]) -> Result<RevocationStatus> {
+        debug!("Sending OCSP request to {}", url);
+
+        // Send OCSP request via HTTP POST
+        let response = self
+            .http_client
+            .post(url)
+            .header("Content-Type", "application/ocsp-request")
+            .body(request.to_vec())
+            .send()
+            .await?;
+
+        if !response.status().is_success() {
+            return Err(EstError::protocol(format!(
+                "OCSP request failed with status: {}",
+                response.status()
+            )));
+        }
+
+        let response_data = response.bytes().await?;
+
+        // Parse OCSP response
+        self.parse_ocsp_response(&response_data)
+    }
+
+    /// Parse OCSP response.
+    fn parse_ocsp_response(&self, _data: &[u8]) -> Result<RevocationStatus> {
+        // TODO: Implement actual OCSP response parsing
+        // OCSPResponse ::= SEQUENCE {
+        //    responseStatus      OCSPResponseStatus,
+        //    responseBytes       [0] EXPLICIT ResponseBytes OPTIONAL }
+        //
+        // OCSPResponseStatus ::= ENUMERATED {
+        //    successful          (0),
+        //    malformedRequest    (1),
+        //    internalError       (2),
+        //    tryLater            (3),
+        //    sigRequired         (5),
+        //    unauthorized        (6) }
+        //
+        // ResponseBytes ::= SEQUENCE {
+        //    responseType        OBJECT IDENTIFIER,
+        //    response            OCTET STRING }
+        //
+        // For BasicOCSPResponse:
+        // BasicOCSPResponse ::= SEQUENCE {
+        //    tbsResponseData      ResponseData,
+        //    signatureAlgorithm   AlgorithmIdentifier,
+        //    signature            BIT STRING,
+        //    certs                [0] EXPLICIT SEQUENCE OF Certificate OPTIONAL }
+        //
+        // ResponseData ::= SEQUENCE {
+        //    version              [0] EXPLICIT Version DEFAULT v1,
+        //    responderID          ResponderID,
+        //    producedAt           GeneralizedTime,
+        //    responses            SEQUENCE OF SingleResponse,
+        //    responseExtensions   [1] EXPLICIT Extensions OPTIONAL }
+        //
+        // SingleResponse ::= SEQUENCE {
+        //    certID               CertID,
+        //    certStatus           CertStatus,
+        //    thisUpdate           GeneralizedTime,
+        //    nextUpdate           [0] EXPLICIT GeneralizedTime OPTIONAL,
+        //    singleExtensions     [1] EXPLICIT Extensions OPTIONAL }
+        //
+        // CertStatus ::= CHOICE {
+        //    good                 [0] IMPLICIT NULL,
+        //    revoked              [1] IMPLICIT RevokedInfo,
+        //    unknown              [2] IMPLICIT UnknownInfo }
+        //
+        // For now, return placeholder
+        debug!("OCSP response parsing (placeholder - not yet fully implemented)");
+        Ok(RevocationStatus::Unknown)
     }
 
     /// Extract OCSP responder URL from certificate.
@@ -434,10 +766,31 @@ impl RevocationChecker {
                 let aia_oid = const_oid::db::rfc5280::ID_PE_AUTHORITY_INFO_ACCESS;
 
                 if ext.extn_id == aia_oid {
-                    // TODO: Parse AIA extension and extract OCSP URL
-                    debug!(
-                        "Found Authority Information Access extension (parsing not implemented)"
-                    );
+                    // Parse the AIA extension
+                    match AuthorityInfoAccessSyntax::from_der(ext.extn_value.as_bytes()) {
+                        Ok(aia) => {
+                            debug!("Parsed Authority Information Access extension");
+
+                            // Look for OCSP access method
+                            // OCSP OID: 1.3.6.1.5.5.7.48.1
+                            let ocsp_oid = const_oid::db::rfc6960::ID_PKIX_OCSP;
+
+                            for access_desc in aia.0.iter() {
+                                if access_desc.access_method == ocsp_oid {
+                                    // Extract URL from access location (GeneralName)
+                                    if let x509_cert::ext::pkix::name::GeneralName::UniformResourceIdentifier(uri) = &access_desc.access_location {
+                                        if let Ok(url) = std::str::from_utf8(uri.as_bytes()) {
+                                            debug!("Found OCSP URL: {}", url);
+                                            return Ok(Some(url.to_string()));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            warn!("Failed to parse Authority Information Access: {}", e);
+                        }
+                    }
                 }
             }
         }

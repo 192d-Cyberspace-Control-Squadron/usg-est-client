@@ -55,6 +55,12 @@ mod software;
 #[cfg(feature = "csr-gen")]
 pub use software::SoftwareKeyProvider;
 
+#[cfg(feature = "pkcs11")]
+pub mod pkcs11;
+
+#[cfg(feature = "pkcs11")]
+pub use pkcs11::Pkcs11KeyProvider;
+
 use crate::error::Result;
 use async_trait::async_trait;
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};

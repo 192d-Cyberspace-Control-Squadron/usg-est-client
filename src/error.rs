@@ -196,6 +196,11 @@ impl EstError {
         Self::NotSupported(operation.into())
     }
 
+    /// Create a protocol error (uses CertificateParsing for generic protocol errors).
+    pub fn protocol(msg: impl Into<String>) -> Self {
+        Self::CertificateParsing(msg.into())
+    }
+
     /// Returns true if this is a retryable error.
     pub fn is_retryable(&self) -> bool {
         matches!(

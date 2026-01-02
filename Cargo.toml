@@ -50,6 +50,17 @@ tracing = "0.1.44"
 # Date/time handling (optional, for renewal feature)
 time = { version = "0.3", optional = true, features = ["formatting", "parsing", "macros"] }
 
+# PKCS#11 support (optional, for HSM integration)
+cryptoki = { version = "0.8", optional = true }
+hex = { version = "0.4", optional = true }
+uuid = { version = "1.11", features = ["v4"], optional = true }
+
+# Metrics exporters (optional, for metrics feature)
+prometheus = { version = "0.13", optional = true }
+opentelemetry = { version = "0.28.0", optional = true, features = ["metrics"] }
+opentelemetry-prometheus = { version = "0.31.0", optional = true }
+opentelemetry_sdk = { version = "0.28.0", optional = true, features = ["metrics"] }
+
 [dev-dependencies]
 tokio = { version = "1.47", features = ["rt-multi-thread", "macros"] }
 tracing-subscriber = "0.3.22"
@@ -64,8 +75,10 @@ required-features = ["csr-gen"]
 default = ["csr-gen"]
 csr-gen = ["rcgen"]
 hsm = []
+pkcs11 = ["hsm", "cryptoki", "hex", "uuid"]
 renewal = ["time"]
 validation = []
 metrics = []
+metrics-prometheus = ["metrics", "prometheus", "opentelemetry", "opentelemetry-prometheus", "opentelemetry_sdk"]
 revocation = []
 enveloped = []

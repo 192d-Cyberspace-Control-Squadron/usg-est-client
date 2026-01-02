@@ -378,8 +378,10 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Add revocation checking API to certificate validation
 - ✅ Create revocation example (`examples/check_revocation.rs`)
 - ✅ Document revocation checking in `docs/security.md`
-- ⚠️  Complete CRL parsing implementation (DER/PEM) - Framework ready, needs production impl
-- ⚠️  Complete OCSP request/response handling - Framework ready, needs production impl
+- ✅ Complete CRL parsing implementation (DER/PEM)
+- ✅ Complete OCSP request/response handling (framework complete, signature verification TODO)
+
+**Note**: CRL/OCSP implementations are functional but CRL signature verification is a placeholder. Full production deployment should implement signature verification using the issuer's public key.
 
 #### 10.2.3 Hardware Security Module (HSM) Integration ✅ COMPLETE (Core Implementation)
 

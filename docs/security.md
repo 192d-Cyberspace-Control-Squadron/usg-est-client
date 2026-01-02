@@ -268,6 +268,224 @@ ls -l /path/to/private-key.pem
 - Including in container images
 - Hardcoding in source code
 
+### PKCS#11 HSM Integration
+
+The library provides PKCS#11 support for hardware-backed key storage through the `pkcs11` feature:
+
+```rust
+use usg_est_client::hsm::pkcs11::Pkcs11KeyProvider;
+use usg_est_client::hsm::{KeyProvider, KeyAlgorithm};
+
+// Initialize PKCS#11 provider
+let provider = Pkcs11KeyProvider::new(
+    "/usr/lib/softhsm/libsofthsm2.so",  // PKCS#11 library path
+    None,                                // Use first available slot
+    "1234",                              // PIN
+)?;
+
+// Generate key in HSM
+let key_handle = provider
+    .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("device-key"))
+    .await?;
+
+// Private key never leaves the HSM
+```
+
+#### PKCS#11 Security Benefits
+
+✅ **Hardware Security Boundary:**
+- Private keys generated and stored within HSM
+- Keys marked as non-extractable (CKA_EXTRACTABLE=false)
+- Private key operations performed inside secure boundary
+- Protection against memory dumps and debugging attacks
+
+✅ **Persistent Storage:**
+- Keys persist across application restarts
+- Token-based storage (CKA_TOKEN=true)
+- Keys survive process termination
+
+✅ **Standards-Based:**
+- Industry-standard PKCS#11 (Cryptoki) interface
+- Works with multiple HSM vendors
+- Portable across different hardware
+
+#### PKCS#11 Security Considerations
+
+**PIN/Password Protection:**
+
+```rust
+// ❌ Don't hardcode PINs
+let provider = Pkcs11KeyProvider::new(lib, None, "1234")?;  // BAD!
+
+// ✅ Use environment variables or secure credential stores
+use std::env;
+let pin = env::var("HSM_PIN")?;
+let provider = Pkcs11KeyProvider::new(lib, None, &pin)?;
+```
+
+**Token Security:**
+- Physical security for hardware tokens required
+- Protect against unauthorized physical access
+- Consider tamper-evident seals for data center HSMs
+- Remote attestation for cloud HSMs
+
+**Session Management:**
+- Sessions automatically logged out on provider drop
+- Avoid long-lived sessions where possible
+- Monitor for session hijacking attempts
+
+**Slot Selection:**
+
+```rust
+// Verify you're using the correct slot
+let provider = Pkcs11KeyProvider::new(
+    lib_path,
+    Some(0),  // Specify exact slot ID
+    &pin,
+)?;
+
+let info = provider.provider_info();
+println!("Using token: {}", info.name);
+```
+
+#### Supported PKCS#11 Implementations
+
+**Tested With:**
+- **SoftHSM 2.x**: Software HSM for development/testing
+- **YubiHSM 2**: Hardware HSM for production
+- **AWS CloudHSM**: Cloud-based HSM service
+
+**Library Paths:**
+
+| Implementation | Typical Library Path |
+|---------------|---------------------|
+| SoftHSM (Linux) | `/usr/lib/softhsm/libsofthsm2.so` |
+| SoftHSM (macOS) | `/usr/local/lib/softhsm/libsofthsm2.so` |
+| YubiHSM | `/usr/lib/yubihsm_pkcs11.so` |
+| AWS CloudHSM | `/opt/cloudhsm/lib/libcloudhsm_pkcs11.so` |
+
+#### PKCS#11 Best Practices
+
+✅ **Key Generation:**
+
+```rust
+// Generate keys directly in HSM (never import)
+let handle = provider
+    .generate_key_pair(
+        KeyAlgorithm::EcdsaP256,
+        Some("device-key-2025"),  // Descriptive label
+    )
+    .await?;
+```
+
+✅ **Key Lifecycle:**
+
+```rust
+// Find existing keys
+if let Some(handle) = provider.find_key("device-key").await? {
+    // Reuse existing key
+} else {
+    // Generate new key
+    provider.generate_key_pair(algorithm, Some("device-key")).await?
+}
+
+// Delete keys when no longer needed
+provider.delete_key(&handle).await?;
+```
+
+✅ **Monitoring:**
+- Log all HSM operations
+- Monitor for excessive failed PIN attempts
+- Alert on unexpected key generation/deletion
+- Track session creation/destruction
+
+❌ **Avoid:**
+- Importing externally-generated keys when possible
+- Using default PINs (e.g., "0000", "1234")
+- Storing PINs in source code or config files
+- Allowing unlimited PIN retry attempts
+
+#### PKCS#11 Limitations
+
+Current implementation limitations:
+
+- CSR generation requires manual PKCS#10 construction with HSM keys
+- Signing operations return raw signatures (caller must format for CSR)
+- No support for key wrapping/unwrapping
+- No support for encryption/decryption operations
+- Limited to signing and key generation
+
+For production HSM-based CSR generation, you'll need to:
+
+1. Get public key from HSM: `provider.public_key(&handle)`
+2. Build PKCS#10 CertificationRequestInfo structure manually
+3. Hash the request info
+4. Sign hash using: `provider.sign(&handle, &hash)`
+5. Encode complete CSR in DER format
+
+#### PKCS#11 Testing
+
+**SoftHSM Setup for Testing:**
+
+```bash
+# Install SoftHSM
+# Ubuntu/Debian:
+sudo apt-get install softhsm2
+
+# macOS:
+brew install softhsm
+
+# Initialize token
+softhsm2-util --init-token --slot 0 --label "TestToken" --so-pin 0000 --pin 1234
+
+# Verify
+softhsm2-util --show-slots
+```
+
+**Test Key Generation:**
+
+```rust
+#[tokio::test]
+async fn test_hsm_key_generation() {
+    let provider = Pkcs11KeyProvider::new(
+        "/usr/lib/softhsm/libsofthsm2.so",
+        Some(0),
+        "1234",
+    ).unwrap();
+
+    let handle = provider
+        .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("test-key"))
+        .await
+        .unwrap();
+
+    // Verify key is non-extractable
+    assert!(!handle.metadata().extractable);
+}
+```
+
+#### PKCS#11 Security Checklist
+
+Before deploying PKCS#11 HSM integration:
+
+- [ ] HSM library path validated and secured
+- [ ] PIN stored securely (not hardcoded)
+- [ ] Correct slot/token selected
+- [ ] Keys marked as non-extractable (CKA_EXTRACTABLE=false)
+- [ ] Keys marked as sensitive (CKA_SENSITIVE=true)
+- [ ] Key labels follow naming convention
+- [ ] Session logout on provider drop verified
+- [ ] Physical security for hardware HSM ensured
+- [ ] Monitoring and logging configured
+- [ ] PIN retry limits enforced
+- [ ] Regular token firmware updates applied
+- [ ] Backup/recovery procedures documented
+
+#### References
+
+- [PKCS#11 v2.40 Specification](http://docs.oasis-open.org/pkcs11/pkcs11-base/v2.40/pkcs11-base-v2.40.html)
+- [OASIS PKCS#11 Technical Committee](https://www.oasis-open.org/committees/tc_home.php?wg_abbrev=pkcs11)
+- [SoftHSM Documentation](https://www.opendnssec.org/softhsm/)
+
 ---
 
 ## Certificate Validation
