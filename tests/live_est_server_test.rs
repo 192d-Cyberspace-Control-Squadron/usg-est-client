@@ -50,7 +50,9 @@ use usg_est_client::{EnrollmentResponse, EstClient, EstClientConfig, EstError};
 
 /// EST test server URLs
 const TEST_SERVER_URL_TLS_CHANNEL_ENABLED: &str = "https://testrfc7030.com:443";
+#[allow(dead_code)]
 const TEST_SERVER_URL_TLS_CHANNEL_DISABLED: &str = "https://testrfc7030.com:8443";
+#[allow(dead_code)]
 const TEST_SERVER_URL_TLS_CERT_AUTH: &str = "https://testrfc7030.com:9443";
 
 /// Test credentials
@@ -104,7 +106,7 @@ async fn create_test_client() -> Result<EstClient, EstError> {
         .trust_explicit(vec![ca_cert_pem])
         .http_auth(TEST_USERNAME, TEST_PASSWORD)
         .build()
-        .map_err(|e| EstError::config(e))?;
+        .map_err(EstError::config)?;
 
     EstClient::new(config).await
 }
@@ -117,7 +119,7 @@ async fn create_unauthenticated_client() -> Result<EstClient, EstError> {
         .server_url(TEST_SERVER_URL_TLS_CHANNEL_ENABLED)?
         .trust_explicit(vec![ca_cert_pem])
         .build()
-        .map_err(|e| EstError::config(e))?;
+        .map_err(EstError::config)?;
 
     EstClient::new(config).await
 }
@@ -284,7 +286,7 @@ async fn test_live_enroll_without_auth_fails() {
         EstError::AuthenticationRequired { .. } => {
             println!("Correctly received authentication required error");
         }
-        EstError::ServerError { status, .. } if status == 401 => {
+        EstError::ServerError { status: 401, .. } => {
             println!("Correctly received 401 Unauthorized");
         }
         _ => {
@@ -336,16 +338,15 @@ async fn test_live_tls_without_ca_fails() {
 
     // This test expects failure because the test server uses a self-signed cert
     // that won't be in the WebPKI trust store
-    if client.is_ok() {
-        let client = client.unwrap();
+    if let Ok(client) = client {
         let result = client.get_ca_certs().await;
         // If client creation succeeded, the actual request should fail
         // (unless server is unreachable, in which case we skip)
-        if let Err(ref e) = result {
-            if is_connection_error(e) {
-                println!("SKIPPED: Test server unreachable");
-                return;
-            }
+        if let Err(ref e) = result
+            && is_connection_error(e)
+        {
+            println!("SKIPPED: Test server unreachable");
+            return;
         }
         assert!(
             result.is_err(),

@@ -415,7 +415,7 @@ mod tests {
         // Test common pattern: ${COMPUTERNAME}.${USERDNSDOMAIN}
         let result = expand_variables("${COMPUTERNAME}.${USERDNSDOMAIN}").unwrap();
         // COMPUTERNAME should expand, USERDNSDOMAIN may or may not depending on platform
-        assert!(result.len() > 0);
+        assert!(!result.is_empty());
     }
 
     #[test]

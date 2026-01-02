@@ -79,7 +79,7 @@ use const_oid::db::rfc5912::{
     ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, ID_EC_PUBLIC_KEY, SECP_256_R_1, SECP_384_R_1,
     SHA_256_WITH_RSA_ENCRYPTION,
 };
-use cryptoki::context::{CInitializeArgs, Pkcs11};
+use cryptoki::context::{CInitializeArgs, CInitializeFlags, Pkcs11};
 use cryptoki::mechanism::Mechanism;
 use cryptoki::object::{Attribute, AttributeType, ObjectClass, ObjectHandle};
 use cryptoki::session::{Session, UserType};
@@ -117,6 +117,13 @@ pub struct Pkcs11KeyProvider {
     /// Provider metadata
     info: ProviderInfo,
 }
+
+// SAFETY: Pkcs11KeyProvider is thread-safe because:
+// 1. All access to the Session is protected by a Mutex
+// 2. PKCS#11 operations are inherently thread-safe when serialized
+// 3. The pkcs11 context (Arc<Pkcs11>) is already Send+Sync
+unsafe impl Send for Pkcs11KeyProvider {}
+unsafe impl Sync for Pkcs11KeyProvider {}
 
 impl Pkcs11KeyProvider {
     /// Create a new PKCS#11 key provider.
@@ -165,7 +172,7 @@ impl Pkcs11KeyProvider {
         })?;
 
         pkcs11
-            .initialize(CInitializeArgs::OsThreads)
+            .initialize(CInitializeArgs::new(CInitializeFlags::OS_LOCKING_OK))
             .map_err(|e| EstError::hsm(format!("Failed to initialize PKCS#11 library: {}", e)))?;
 
         // Get library info for provider metadata
@@ -207,7 +214,7 @@ impl Pkcs11KeyProvider {
             .map_err(|e| EstError::hsm(format!("Failed to open session: {}", e)))?;
 
         // Login with PIN
-        let auth_pin = AuthPin::new(pin.to_string());
+        let auth_pin = AuthPin::new(pin.to_string().into_boxed_str());
         session
             .login(UserType::User, Some(&auth_pin))
             .map_err(|e| EstError::hsm(format!("Failed to login to token: {}", e)))?;
@@ -231,6 +238,7 @@ impl Pkcs11KeyProvider {
 
         Ok(Self {
             pkcs11: Arc::new(pkcs11),
+            #[allow(clippy::arc_with_non_send_sync)]
             session: Arc::new(Mutex::new(session)),
             slot,
             info,
