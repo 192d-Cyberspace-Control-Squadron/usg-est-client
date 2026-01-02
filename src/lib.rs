@@ -148,6 +148,9 @@ pub mod csr;
 #[cfg(feature = "hsm")]
 pub mod hsm;
 
+#[cfg(feature = "fips")]
+pub mod fips;
+
 #[cfg(feature = "renewal")]
 pub mod renewal;
 

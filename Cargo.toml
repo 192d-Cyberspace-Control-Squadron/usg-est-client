@@ -83,6 +83,10 @@ aes = { version = "0.8", optional = true }
 cbc = { version = "0.1", optional = true }
 des = { version = "0.8", optional = true }
 
+# FIPS 140-2 compliance (optional, for DoD deployment)
+openssl = { version = "0.10", optional = true, features = ["vendored"] }
+openssl-sys = { version = "0.9", optional = true, features = ["vendored"] }
+
 # CLI support (optional, for est-enroll binary)
 clap = { version = "4.5", features = ["derive"], optional = true }
 
@@ -193,3 +197,8 @@ windows = ["dep:windows", "auto-enroll"]
 # Windows service support (includes windows feature)
 # Note: Only compiles on Windows targets
 windows-service = ["windows", "dep:windows-service", "tracing-subscriber"]
+
+# FIPS 140-2 cryptographic compliance (for DoD ATO)
+# Uses OpenSSL FIPS module instead of rustls for FIPS-validated cryptography
+# Requires: OpenSSL 3.0+ with FIPS module installed and configured
+fips = ["openssl", "openssl-sys", "native-tls-backend"]

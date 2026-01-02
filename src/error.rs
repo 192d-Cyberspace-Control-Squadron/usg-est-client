@@ -123,6 +123,22 @@ pub enum EstError {
     /// Platform-specific error (Windows, macOS, etc.).
     #[error("Platform error: {0}")]
     Platform(String),
+
+    /// FIPS 140-2 module not available or not compiled in.
+    #[error("FIPS 140-2 not available: {0}")]
+    FipsNotAvailable(String),
+
+    /// FIPS 140-2 mode not enabled when required.
+    #[error("FIPS 140-2 mode not enabled: {0}")]
+    FipsNotEnabled(String),
+
+    /// FIPS 140-2 configuration invalid.
+    #[error("FIPS 140-2 configuration invalid: {0}")]
+    FipsInvalidConfig(String),
+
+    /// Algorithm not allowed in FIPS mode.
+    #[error("Algorithm not allowed in FIPS mode: {0}")]
+    FipsAlgorithmNotAllowed(String),
 }
 
 impl EstError {

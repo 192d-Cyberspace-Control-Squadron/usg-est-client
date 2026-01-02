@@ -2573,6 +2573,8 @@ dependencies = [
  "hex",
  "hostname",
  "native-tls",
+ "openssl",
+ "openssl-sys",
  "opentelemetry",
  "opentelemetry-prometheus",
  "opentelemetry_sdk",

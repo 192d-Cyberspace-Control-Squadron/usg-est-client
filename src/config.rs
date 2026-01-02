@@ -65,6 +65,13 @@ pub struct EstClientConfig {
     /// trust anchors using RFC 5280 path validation.
     #[cfg(feature = "validation")]
     pub validation_config: Option<CertificateValidationConfig>,
+
+    /// FIPS 140-2 compliance configuration.
+    ///
+    /// When enabled, the client will use FIPS-validated cryptographic modules
+    /// and enforce FIPS-approved algorithms only.
+    #[cfg(feature = "fips")]
+    pub fips_config: Option<crate::fips::FipsConfig>,
 }
 
 impl std::fmt::Debug for EstClientConfig {
@@ -94,6 +101,8 @@ impl Default for EstClientConfig {
             additional_headers: Vec::new(),
             #[cfg(feature = "validation")]
             validation_config: None,
+            #[cfg(feature = "fips")]
+            fips_config: None,
         }
     }
 }
@@ -134,6 +143,8 @@ pub struct EstClientConfigBuilder {
     additional_headers: Vec<(String, String)>,
     #[cfg(feature = "validation")]
     validation_config: Option<CertificateValidationConfig>,
+    #[cfg(feature = "fips")]
+    fips_config: Option<crate::fips::FipsConfig>,
 }
 
 impl EstClientConfigBuilder {
@@ -245,6 +256,37 @@ impl EstClientConfigBuilder {
         self
     }
 
+    /// Enable FIPS 140-2 compliance mode.
+    ///
+    /// When enabled, the client will use FIPS-validated cryptographic modules
+    /// and enforce FIPS-approved algorithms only.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use usg_est_client::EstClientConfig;
+    /// # #[cfg(feature = "fips")]
+    /// # use usg_est_client::fips::FipsConfig;
+    /// # #[cfg(feature = "fips")]
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let fips_config = FipsConfig::builder()
+    ///     .enforce_fips_mode(true)
+    ///     .min_rsa_key_size(2048)
+    ///     .build()?;
+    ///
+    /// let config = EstClientConfig::builder()
+    ///     .server_url("https://est.example.mil")?
+    ///     .fips_config(fips_config)
+    ///     .build()?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "fips")]
+    pub fn fips_config(mut self, config: crate::fips::FipsConfig) -> Self {
+        self.fips_config = Some(config);
+        self
+    }
+
     /// Build the configuration.
     ///
     /// # Errors
@@ -264,6 +306,8 @@ impl EstClientConfigBuilder {
             additional_headers: self.additional_headers,
             #[cfg(feature = "validation")]
             validation_config: self.validation_config,
+            #[cfg(feature = "fips")]
+            fips_config: self.fips_config,
         })
     }
 }
