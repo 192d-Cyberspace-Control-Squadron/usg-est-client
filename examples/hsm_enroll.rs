@@ -37,6 +37,7 @@
 //! cargo run --example hsm_enroll --features hsm,csr-gen -- --server https://est.example.com
 //! ```
 
+#[cfg(all(feature = "hsm", feature = "csr-gen"))]
 use std::env;
 
 #[cfg(all(feature = "hsm", feature = "csr-gen"))]

@@ -32,11 +32,14 @@
 //! cargo run --example auto_renewal --features renewal,csr-gen -- --server https://est.example.com
 //! ```
 
+#[cfg(feature = "renewal")]
 use std::env;
+#[cfg(feature = "renewal")]
 use std::time::Duration;
 
 #[cfg(feature = "renewal")]
 use usg_est_client::renewal::{RenewalConfig, RenewalScheduler};
+#[cfg(feature = "renewal")]
 use usg_est_client::{EstClient, EstClientConfig};
 
 #[tokio::main]

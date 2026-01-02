@@ -168,12 +168,12 @@ pub mod auto_enroll;
 
 // Re-export main types at crate root for convenience
 pub use client::EstClient;
+#[cfg(feature = "validation")]
+pub use config::CertificateValidationConfig;
 pub use config::{
     BootstrapConfig, ClientIdentity, EstClientConfig, EstClientConfigBuilder, HttpAuth,
     TrustAnchors,
 };
-#[cfg(feature = "validation")]
-pub use config::CertificateValidationConfig;
 pub use error::{EstError, Result};
 pub use types::{
     CaCertificates, CmcRequest, CmcResponse, CsrAttributes, EnrollmentResponse,

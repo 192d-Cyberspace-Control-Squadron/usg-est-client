@@ -19,8 +19,8 @@
 //! EST servers according to RFC 7030.
 
 use base64::prelude::*;
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::StatusCode;
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 
 use crate::config::EstClientConfig;
 use crate::error::{EstError, Result};
@@ -512,10 +512,8 @@ impl EstClient {
         };
 
         // Create validator with trust anchors
-        let validator = CertificateValidator::with_config(
-            config.trust_anchors.clone(),
-            validation_config,
-        );
+        let validator =
+            CertificateValidator::with_config(config.trust_anchors.clone(), validation_config);
 
         // Validate the certificate (no intermediates - they should be in trust anchors)
         let result = validator.validate(cert, &[])?;

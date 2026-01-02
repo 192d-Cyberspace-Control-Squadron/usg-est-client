@@ -100,7 +100,6 @@ use clap::Parser;
 use der::Encode;
 use std::path::PathBuf;
 use tracing::{error, info};
-use tracing_subscriber;
 use usg_est_client::csr::CsrBuilder;
 use usg_est_client::hsm::pkcs11::Pkcs11KeyProvider;
 use usg_est_client::hsm::{KeyAlgorithm, KeyProvider};
@@ -327,14 +326,12 @@ fn display_certificate_info(cert: &Certificate) {
     info!("   -------------------------");
 
     // Extract subject
-    if let Ok(subject) = cert.tbs_certificate.subject.to_string() {
-        info!("   Subject: {}", subject);
-    }
+    let subject = cert.tbs_certificate.subject.to_string();
+    info!("   Subject: {}", subject);
 
     // Extract issuer
-    if let Ok(issuer) = cert.tbs_certificate.issuer.to_string() {
-        info!("   Issuer: {}", issuer);
-    }
+    let issuer = cert.tbs_certificate.issuer.to_string();
+    info!("   Issuer: {}", issuer);
 
     // Extract serial number
     info!(

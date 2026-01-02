@@ -32,5 +32,6 @@ mod tls;
 #[path = "integration/errors/mod.rs"]
 mod errors;
 
+#[cfg(feature = "metrics")]
 #[path = "integration/metrics_test.rs"]
 mod metrics_test;

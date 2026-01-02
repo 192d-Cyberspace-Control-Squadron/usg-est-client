@@ -18,7 +18,7 @@ use x509_cert::Certificate;
 
 // Import validation types
 use usg_est_client::validation::{
-    get_subject_cn, is_ca_certificate, CertificateValidator, ValidationConfig, ValidationResult,
+    CertificateValidator, ValidationConfig, ValidationResult, get_subject_cn, is_ca_certificate,
 };
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -82,11 +82,11 @@ fn demo_basic_validation() -> Result<(), Box<dyn std::error::Error>> {
 fn demo_custom_validation() -> Result<(), Box<dyn std::error::Error>> {
     // Create custom validation configuration
     let config = ValidationConfig {
-        max_chain_length: 5, // Stricter than default of 10
-        check_revocation: false, // Disable revocation checking
-        enforce_name_constraints: true, // Enforce RFC 5280 name constraints
+        max_chain_length: 5,              // Stricter than default of 10
+        check_revocation: false,          // Disable revocation checking
+        enforce_name_constraints: true,   // Enforce RFC 5280 name constraints
         enforce_policy_constraints: true, // Enforce RFC 5280 policy constraints
-        allow_expired: false, // Don't allow expired certificates
+        allow_expired: false,             // Don't allow expired certificates
     };
 
     println!("   Custom validation configuration:");

@@ -4,7 +4,7 @@
 //! Integration tests for metrics collection and export.
 
 use std::time::Duration;
-use usg_est_client::metrics::{MetricsCollector, OperationType};
+use usg_est_client::metrics::{MetricsCollector, MetricsSummary, OperationType};
 
 #[cfg(feature = "metrics-prometheus")]
 use usg_est_client::metrics::prometheus::PrometheusExporter;
@@ -205,7 +205,7 @@ async fn test_metrics_all_operation_types() {
         .record_operation(OperationType::FullCmc, Duration::from_millis(150), true)
         .await;
 
-    let summary = collector.get_summary().await;
+    let summary: MetricsSummary = collector.get_summary().await;
 
     assert_eq!(summary.total_operations(), 6);
     assert_eq!(summary.total_successful(), 6);
