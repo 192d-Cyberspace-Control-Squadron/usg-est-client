@@ -37,7 +37,7 @@
 //! est-autoenroll-service --console
 //!
 //! # Run with specific config file
-//! est-autoenroll-service --console --config C:\ProgramData\EST\config.toml
+//! est-autoenroll-service --console --config C:\ProgramData\Department of War\EST\config.toml
 //! ```
 
 use std::env;

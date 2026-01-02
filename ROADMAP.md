@@ -577,8 +577,8 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 #### 11.1.2 Config File Locations ✅ COMPLETE
 
 - ✅ Define Windows-standard config search paths:
-  - ✅ `%PROGRAMDATA%\EST\config.toml` (system-wide)
-  - ✅ `%LOCALAPPDATA%\EST\config.toml` (per-user)
+  - ✅ `%PROGRAMDATA%\Department of War\EST\config.toml` (system-wide)
+  - ✅ `%LOCALAPPDATA%\Department of War\EST\config.toml` (per-user)
   - ✅ Command-line specified path via `ConfigLoader::with_path()`
   - ✅ Environment variable override via `EST_CONFIG_PATH`
   - ✅ Unix paths: `/etc/est/config.toml`, `~/.config/est/config.toml`, `~/.est/config.toml`
@@ -1078,7 +1078,7 @@ timeout_seconds = 60
 
 [trust]
 mode = "explicit"
-ca_bundle_path = "C:\\ProgramData\\EST\\ca-bundle.pem"
+ca_bundle_path = "C:\\ProgramData\\Department of War\\EST\\ca-bundle.pem"
 
 [authentication]
 method = "http_basic"
@@ -1129,7 +1129,7 @@ ca_label = "servers"
 
 [trust]
 mode = "explicit"
-ca_bundle_path = "C:\\ProgramData\\EST\\ca-bundle.pem"
+ca_bundle_path = "C:\\ProgramData\\Department of War\\EST\\ca-bundle.pem"
 
 [authentication]
 method = "client_cert"
@@ -1174,7 +1174,7 @@ friendly_name = "Web Server Certificate"
 
 [logging]
 level = "debug"
-path = "C:\\ProgramData\\EST\\logs\\est-server.log"
+path = "C:\\ProgramData\\Department of War\\EST\\logs\\est-server.log"
 windows_event_log = true
 ```
 

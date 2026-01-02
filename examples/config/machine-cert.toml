@@ -4,7 +4,7 @@
 #
 # This is a minimal configuration for enrolling a machine certificate.
 # Place this file at:
-#   Windows: C:\ProgramData\EST\config.toml
+#   Windows: C:\ProgramData\Department of War\EST\config.toml
 #   Linux:   /etc/est/config.toml
 #   macOS:   /etc/est/config.toml
 

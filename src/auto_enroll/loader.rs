@@ -20,8 +20,8 @@ use super::config::AutoEnrollConfig;
 ///
 /// 1. Explicit path (if set via `with_path()`)
 /// 2. Environment variable `EST_CONFIG_PATH`
-/// 3. Windows: `%PROGRAMDATA%\EST\config.toml`
-/// 4. Windows: `%LOCALAPPDATA%\EST\config.toml`
+/// 3. Windows: `%PROGRAMDATA%\Department of War\EST\config.toml`
+/// 4. Windows: `%LOCALAPPDATA%\Department of War\EST\config.toml`
 /// 5. Unix: `/etc/est/config.toml`
 /// 6. Unix: `~/.config/est/config.toml`
 /// 7. Current directory: `./est-config.toml`
@@ -215,6 +215,7 @@ impl ConfigLoader {
             // Windows: ProgramData
             if let Some(program_data) = std::env::var_os("PROGRAMDATA") {
                 let mut path = PathBuf::from(program_data);
+                path.pusj("Department of War");
                 path.push("EST");
                 path.push("config.toml");
                 paths.push(path);
@@ -223,6 +224,7 @@ impl ConfigLoader {
             // Windows: LocalAppData
             if let Some(local_app_data) = dirs::data_local_dir() {
                 let mut path = local_app_data;
+                path.pusj("Department of War");
                 path.push("EST");
                 path.push("config.toml");
                 paths.push(path);

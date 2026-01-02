@@ -5,7 +5,7 @@
 # This configuration is designed for Windows domain workstations.
 # It uses the Windows certificate store and supports automatic renewal.
 #
-# Place this file at: C:\ProgramData\EST\config.toml
+# Place this file at: C:\ProgramData\Department of War\EST\config.toml
 
 [server]
 url = "https://est.contoso.com"
@@ -17,7 +17,7 @@ channel_binding = true
 
 [trust]
 mode = "explicit"
-ca_bundle_path = "C:\\ProgramData\\EST\\contoso-ca.pem"
+ca_bundle_path = "C:\\ProgramData\\Department of War\\EST\\contoso-ca.pem"
 
 [authentication]
 # Use client certificate for re-enrollment (initial enrollment uses HTTP Basic)
@@ -43,7 +43,7 @@ locality = "Redmond"
 dns = [
     "${COMPUTERNAME}.${USERDNSDOMAIN}",
     "${COMPUTERNAME}.contoso.com",
-    "${COMPUTERNAME}"
+    "${COMPUTERNAME}",
 ]
 # Automatically include local IP addresses
 include_ip = true
@@ -72,7 +72,7 @@ archive_old = true
 
 [logging]
 level = "info"
-path = "C:\\ProgramData\\EST\\logs\\est-enroll.log"
+path = "C:\\ProgramData\\Department of War\\EST\\logs\\est-enroll.log"
 windows_event_log = true
 max_size_mb = 10
 max_files = 5

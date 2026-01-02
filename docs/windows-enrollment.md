@@ -39,7 +39,7 @@ The EST auto-enrollment system provides a modern, standards-based alternative to
 
 Configuration files use TOML format with support for variable expansion. The file is typically located at:
 
-- **Windows**: `C:\ProgramData\EST\config.toml`
+- **Windows**: `C:\ProgramData\Department of War\EST\config.toml`
 - **Linux**: `/etc/est/config.toml`
 - **macOS**: `/etc/est/config.toml`
 
@@ -143,7 +143,7 @@ mode = "explicit"
 
 # Path to CA certificate bundle (PEM format)
 # Required when mode is "explicit"
-ca_bundle_path = "C:\\ProgramData\\EST\\ca-bundle.pem"
+ca_bundle_path = "C:\\ProgramData\\Department of War\\EST\\ca-bundle.pem"
 
 # Expected CA fingerprint for bootstrap mode
 # Format: SHA-256 hash with optional colons
@@ -176,8 +176,8 @@ cert_store = "LocalMachine\\My"
 cert_thumbprint = "auto"  # or specific thumbprint
 
 # Option 2: PEM files
-cert_path = "C:\\ProgramData\\EST\\client.pem"
-key_path = "C:\\ProgramData\\EST\\client.key"
+cert_path = "C:\\ProgramData\\Department of War\\EST\\client.pem"
+key_path = "C:\\ProgramData\\Department of War\\EST\\client.key"
 ```
 
 **Authentication Methods:**
@@ -303,9 +303,9 @@ windows_store = "LocalMachine\\My"
 friendly_name = "EST Machine Certificate"
 
 # --- PEM Files (cross-platform) ---
-cert_path = "C:\\ProgramData\\EST\\machine.pem"
-key_path = "C:\\ProgramData\\EST\\machine.key"
-chain_path = "C:\\ProgramData\\EST\\chain.pem"
+cert_path = "C:\\ProgramData\\Department of War\\EST\\machine.pem"
+key_path = "C:\\ProgramData\\Department of War\\EST\\machine.key"
+chain_path = "C:\\ProgramData\\Department of War\\EST\\chain.pem"
 
 # Archive old certificates instead of deleting
 archive_old = true
@@ -328,7 +328,7 @@ Logging and monitoring configuration.
 level = "info"
 
 # Log file path
-path = "C:\\ProgramData\\EST\\logs\\est-enroll.log"
+path = "C:\\ProgramData\\Department of War\\EST\\logs\\est-enroll.log"
 
 # Enable Windows Event Log integration (Windows only)
 windows_event_log = true
@@ -367,6 +367,7 @@ health_check_port = 8080
 Replace ADCS auto-enrollment for Windows domain workstations.
 
 **Requirements:**
+
 - Machine certificates with domain FQDN
 - Windows certificate store integration
 - Automatic renewal
@@ -375,6 +376,7 @@ Replace ADCS auto-enrollment for Windows domain workstations.
 **Configuration:** See [workstation.toml](../examples/config/workstation.toml)
 
 **Key Features:**
+
 - Uses `${COMPUTERNAME}$` as username (machine account style)
 - Stores certificate in `LocalMachine\My` with friendly name
 - Enables Windows Event Log for centralized monitoring
@@ -386,6 +388,7 @@ Replace ADCS auto-enrollment for Windows domain workstations.
 TLS certificates for web servers with multiple DNS names.
 
 **Requirements:**
+
 - Multiple Subject Alternative Names (SANs)
 - RSA 2048 for broad compatibility
 - TPM key protection (if available)
@@ -394,6 +397,7 @@ TLS certificates for web servers with multiple DNS names.
 **Configuration:** See [server.toml](../examples/config/server.toml)
 
 **Key Features:**
+
 - Multiple DNS SANs including wildcards
 - Specific IP addresses for direct access
 - TPM-backed keys with attestation
@@ -405,6 +409,7 @@ TLS certificates for web servers with multiple DNS names.
 Minimal configuration for resource-constrained devices.
 
 **Requirements:**
+
 - Simple certificate with hostname only
 - No Windows-specific features
 - Low log verbosity
@@ -413,6 +418,7 @@ Minimal configuration for resource-constrained devices.
 **Configuration:** See [kiosk.toml](../examples/config/kiosk.toml)
 
 **Key Features:**
+
 - Uses webpki trust (simpler deployment)
 - Software key provider (no HSM required)
 - Warn-level logging only
@@ -449,6 +455,7 @@ common_name = "${COMPUTERNAME}.newdeployment.com"
 When `storage.windows_store` is configured, certificates are stored in the Windows certificate store instead of PEM files.
 
 **Benefits:**
+
 - Native Windows integration (IIS, RDP, etc. can use the certificate)
 - Private key protected by Windows DPAPI
 - Certificate UI visible in MMC (certlm.msc)
@@ -461,6 +468,7 @@ When `storage.windows_store` is configured, certificates are stored in the Windo
 When `certificate.key.provider = "cng"`, private keys are stored using Windows CNG.
 
 **Benefits:**
+
 - Hardware-backed key storage (if TPM available)
 - Non-exportable keys (cannot be copied)
 - Integration with Windows security policies
@@ -473,12 +481,14 @@ When `certificate.key.provider = "cng"`, private keys are stored using Windows C
 When `certificate.key.provider = "tpm"`, private keys are stored in the TPM.
 
 **Benefits:**
+
 - Hardware root of trust
 - Keys never leave the TPM chip
 - Attestation capabilities (prove key is TPM-backed)
 - Resistance to software attacks
 
 **Requirements:**
+
 - TPM 2.0 chip
 - Windows 10/11 or Linux with tpm2-tools
 
@@ -491,6 +501,7 @@ The enrollment client runs as a Windows Service for automatic background operati
 **Service Name:** `EST-Enrollment` (planned)
 
 **Service Features:**
+
 - Automatic startup on boot
 - Runs as LocalSystem (or configured account)
 - Monitors certificate expiration in background
@@ -504,11 +515,13 @@ The enrollment client runs as a Windows Service for automatic background operati
 When `logging.windows_event_log = true`, events are written to Windows Event Log.
 
 **Event Sources:**
+
 - **Information**: Successful enrollment, renewal
 - **Warning**: Approaching expiration, retry attempts
 - **Error**: Enrollment failures, configuration errors
 
 **Event IDs** (planned):
+
 - 1000: Enrollment started
 - 1001: Enrollment successful
 - 1002: Enrollment failed
@@ -563,12 +576,14 @@ When `logging.windows_event_log = true`, events are written to Windows Event Log
 ### Key Protection
 
 **Minimum Requirements:**
+
 - Use `non_exportable = true` for Windows CNG keys
 - Use `provider = "tpm"` for highest security
 - Never log or display private keys
 - Rotate keys on renewal (default behavior)
 
 **Defense in Depth:**
+
 - Combine client cert auth + HTTP Basic for two-factor enrollment
 - Use short certificate lifetimes (e.g., 90 days) for frequent rotation
 - Enable audit logging for key operations
@@ -589,6 +604,7 @@ est-enroll --validate-config
 ```
 
 **Common Validation Errors:**
+
 - `server.url is required`: Missing or empty server URL
 - `server.url must be HTTPS`: URL uses http:// instead of https://
 - `username is required when method is http_basic`: Missing HTTP Basic credentials
@@ -604,33 +620,40 @@ level = "debug"
 ```
 
 Look for log entries like:
+
 ```
 Expanded common_name: DESKTOP-ABC123.corp.contoso.com
 ```
 
 **Common Issues:**
+
 - `${USERDNSDOMAIN}` is empty: Machine not joined to domain, or domain suffix not set
 - `${COMPUTERNAME}` contains unexpected value: Check `COMPUTERNAME` environment variable
 
 ### Connection Failures
 
 **Symptoms:**
+
 - Error: "Failed to connect to EST server"
 - Error: "SSL/TLS handshake failed"
 
 **Troubleshooting:**
+
 1. Verify EST server URL is correct and accessible:
+
    ```powershell
    curl https://est.example.com/.well-known/est/cacerts
    ```
 
 2. Check trust anchor configuration:
+
    ```powershell
    # Verify CA bundle file exists and is valid
    openssl x509 -in C:\ProgramData\EST\ca-bundle.pem -text -noout
    ```
 
 3. Test TLS connection:
+
    ```powershell
    # Windows
    Test-NetConnection -ComputerName est.example.com -Port 443
@@ -641,26 +664,32 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
 ### Authentication Failures
 
 **Symptoms:**
+
 - Error: "401 Unauthorized"
 - Error: "Failed to authenticate with EST server"
 
 **Troubleshooting:**
 
 **For HTTP Basic:**
+
 1. Verify credentials are correct:
+
    ```powershell
    # Check environment variable is set
    echo $env:EST_PASSWORD
    ```
 
 2. Test credentials manually:
+
    ```powershell
    $cred = Get-Credential
    Invoke-WebRequest -Uri https://est.example.com/.well-known/est/cacerts -Credential $cred
    ```
 
 **For Client Certificate:**
+
 1. Verify certificate exists in store or file:
+
    ```powershell
    # Windows Store
    Get-ChildItem Cert:\LocalMachine\My
@@ -670,11 +699,13 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
    ```
 
 2. Check certificate is not expired:
+
    ```powershell
    openssl x509 -in client.pem -noout -dates
    ```
 
 3. Verify private key matches certificate:
+
    ```powershell
    # Extract public key from cert and key, compare
    openssl x509 -in client.pem -pubkey -noout > cert-pub.pem
@@ -685,16 +716,19 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
 ### Enrollment Errors
 
 **Error: "CSR generation failed"**
+
 - Check certificate configuration (common_name, organization, etc.)
 - Verify key algorithm is supported
 - If using HSM: ensure key provider is accessible
 
 **Error: "Server returned 202 Accepted"**
+
 - Enrollment is pending manual approval on server
 - Check `Retry-After` header for when to retry
 - Contact EST server administrator
 
 **Error: "Certificate parsing failed"**
+
 - Server returned invalid response
 - Enable debug logging to see raw response
 - Check EST server configuration
@@ -704,12 +738,14 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
 **Certificate Not Renewing:**
 
 1. Check renewal is enabled:
+
    ```toml
    [renewal]
    enabled = true
    ```
 
 2. Verify certificate is within renewal threshold:
+
    ```powershell
    # Check expiration date
    openssl x509 -in machine.pem -noout -dates
@@ -719,6 +755,7 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
    ```
 
 3. Check renewal service is running:
+
    ```powershell
    # Windows
    Get-Service EST-Enrollment
@@ -730,6 +767,7 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
 4. Review logs for renewal attempts and errors
 
 **Renewal Fails with 401:**
+
 - Re-enrollment requires client certificate authentication
 - Ensure `authentication.method = "auto"` or `"client_cert"`
 - Verify current certificate is in correct location for client auth
@@ -737,11 +775,13 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
 ### Performance Issues
 
 **High CPU/Memory Usage:**
+
 - Increase `renewal.check_interval_hours` (reduce check frequency)
 - Use `logging.level = "warn"` instead of "debug" or "info"
 - Check for certificate store corruption (Windows)
 
 **Slow Enrollment:**
+
 - Increase `server.timeout_seconds`
 - Check network latency to EST server
 - If using HSM: hardware crypto operations may be slow (expected)
@@ -749,13 +789,15 @@ Expanded common_name: DESKTOP-ABC123.corp.contoso.com
 ### Log Analysis
 
 **Enable Debug Logging:**
+
 ```toml
 [logging]
 level = "debug"
-path = "C:\\ProgramData\\EST\\logs\\debug.log"
+path = "C:\\ProgramData\\Department of War\\EST\\logs\\debug.log"
 ```
 
 **Key Log Events:**
+
 - `Loading configuration from: ...` - Config file location
 - `Expanded variable: ...` - Variable expansion results
 - `Connecting to EST server: ...` - Connection attempts
@@ -765,6 +807,7 @@ path = "C:\\ProgramData\\EST\\logs\\debug.log"
 - `Certificate expires in X days` - Expiration monitoring
 
 **Log Rotation:**
+
 - Default: 10 MB max size, 5 files
 - Configure via `logging.max_size_mb` and `logging.max_files`
 - Old logs are automatically rotated when size limit reached

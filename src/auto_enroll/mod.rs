@@ -22,7 +22,7 @@
 //!
 //! [trust]
 //! mode = "explicit"
-//! ca_bundle_path = "C:\\ProgramData\\EST\\ca-bundle.pem"
+//! ca_bundle_path = "C:\\ProgramData\\Department of War\\EST\\ca-bundle.pem"
 //!
 //! [authentication]
 //! method = "http_basic"
