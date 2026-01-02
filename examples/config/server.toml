@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema/est-config.schema.json
 # EST Auto-Enrollment Configuration
 # Web server certificate with multiple SANs and TPM key protection
 #

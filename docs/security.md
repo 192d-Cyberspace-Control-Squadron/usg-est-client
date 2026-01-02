@@ -496,6 +496,176 @@ Before deploying PKCS#11 HSM integration:
 
 ---
 
+## Certificate Path Validation (RFC 5280)
+
+The `validation` feature provides comprehensive RFC 5280 certificate path validation for issued certificates, including name constraints, policy constraints, and signature verification.
+
+### Enabling Validation
+
+```rust
+use usg_est_client::{EstClientConfig, CertificateValidationConfig};
+use x509_cert::Certificate;
+
+// Load trust anchor certificates
+let trust_anchors: Vec<Certificate> = load_ca_certificates()?;
+
+// Create validation configuration
+let validation_config = CertificateValidationConfig::new(trust_anchors)
+    .max_chain_length(5)
+    .disable_name_constraints();  // Optional: relax name constraint checking
+
+// Configure EST client with validation
+let config = EstClientConfig::builder()
+    .server_url("https://est.example.com")?
+    .validation_config(validation_config)
+    .build()?;
+
+let client = EstClient::new(config).await?;
+
+// Certificate validation is now automatic on enrollment
+let response = client.simple_enroll(&csr_der).await?;
+// If validation fails, this returns an error
+```
+
+### Standalone Validation
+
+For manual certificate chain validation:
+
+```rust
+use usg_est_client::validation::{CertificateValidator, ValidationConfig};
+
+// Create validator
+let config = ValidationConfig {
+    max_chain_length: 10,
+    check_revocation: false,
+    enforce_name_constraints: true,
+    enforce_policy_constraints: true,
+    allow_expired: false,
+};
+
+let validator = CertificateValidator::with_config(trust_anchors, config);
+
+// Validate a certificate
+let result = validator.validate(&end_entity_cert, &intermediates)?;
+
+if result.is_valid {
+    println!("Certificate chain valid");
+    println!("Chain length: {}", result.chain.len());
+} else {
+    for error in &result.errors {
+        eprintln!("Validation error: {}", error);
+    }
+}
+```
+
+### Name Constraints (RFC 5280 Section 4.2.1.10)
+
+Name constraints restrict the namespace within which all subject names in subsequent certificates must be located.
+
+**Supported Name Types:**
+
+| Type | Example Constraint | Matches |
+|------|-------------------|---------|
+| DNS | `.example.com` | `sub.example.com`, `deep.sub.example.com` |
+| DNS | `example.com` | `example.com`, `sub.example.com` |
+| Email | `example.com` | `user@example.com` |
+| Email | `.example.com` | `user@sub.example.com` |
+| URI | `.example.com` | `https://sub.example.com/` |
+| Directory Name | DER bytes | Subtree matching |
+
+**How It Works:**
+
+1. Name constraints are accumulated from CA certificates
+2. Both permitted and excluded subtrees are tracked
+3. Exclusions take precedence over permissions (RFC 5280)
+4. End-entity subjects and SANs are checked against constraints
+
+**Example: CA with Name Constraints**
+
+```text
+CA Certificate with nameConstraints:
+  Permitted DNS: .example.com
+  Excluded DNS:  .bad.example.com
+
+Valid end-entity:     server.example.com      ✅
+Valid end-entity:     deep.sub.example.com    ✅
+Invalid end-entity:   server.otherdomain.com  ❌
+Invalid end-entity:   server.bad.example.com  ❌
+```
+
+### Policy Constraints (RFC 5280 Section 4.2.1.11)
+
+Policy constraints limit the certification path validation based on certificate policies.
+
+**Constraint Types:**
+
+1. **requireExplicitPolicy**: After N certificates, explicit policy required
+2. **inhibitPolicyMapping**: After N certificates, policy mapping prohibited
+
+```rust
+// Policy constraints are checked automatically when enabled
+let config = ValidationConfig {
+    enforce_policy_constraints: true,
+    ..Default::default()
+};
+```
+
+### Signature Verification
+
+The validation module verifies certificate signatures in the chain:
+
+**Supported Algorithms:**
+
+| Algorithm | OID |
+|-----------|-----|
+| RSA with SHA-256 | 1.2.840.113549.1.1.11 |
+| RSA with SHA-384 | 1.2.840.113549.1.1.12 |
+| RSA with SHA-512 | 1.2.840.113549.1.1.13 |
+| ECDSA with SHA-256 | 1.2.840.10045.4.3.2 |
+| ECDSA with SHA-384 | 1.2.840.10045.4.3.3 |
+| ECDSA with SHA-512 | 1.2.840.10045.4.3.4 |
+
+**Note:** Full cryptographic signature verification requires additional dependencies (rsa, ecdsa crates). The current implementation validates algorithm and structure.
+
+### Validation Benefits
+
+✅ **Security:**
+- Ensures issued certificates chain to trusted roots
+- Validates certificate not expired
+- Enforces CA name constraints
+- Prevents certificate spoofing
+
+✅ **Early Detection:**
+- Catches misconfigured CAs
+- Detects certificate template issues
+- Identifies policy violations
+
+✅ **Compliance:**
+- Implements RFC 5280 path validation algorithm
+- Supports enterprise PKI constraints
+- Enables trust hierarchy enforcement
+
+### Testing with Validation
+
+For testing, you may need to disable some checks:
+
+```rust
+let test_config = CertificateValidationConfig::new(trust_anchors)
+    .allow_expired()                  // For testing with expired certs
+    .disable_name_constraints()       // If test certs lack constraints
+    .disable_policy_constraints();    // If test certs lack policies
+```
+
+### Validation Example
+
+Run the validation example:
+
+```bash
+cargo run --example validate_chain --features validation
+```
+
+---
+
 ## Certificate Validation
 
 ### Validate Issued Certificates

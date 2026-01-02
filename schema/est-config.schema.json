@@ -1,0 +1,401 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://github.com/usgov/usg-est-client/schema/est-config.schema.json",
+  "title": "EST Auto-Enrollment Configuration",
+  "description": "Configuration schema for automated EST certificate enrollment (RFC 7030)",
+  "type": "object",
+  "required": ["server", "certificate"],
+  "properties": {
+    "server": {
+      "type": "object",
+      "description": "EST server connection settings",
+      "required": ["url"],
+      "properties": {
+        "url": {
+          "type": "string",
+          "format": "uri",
+          "pattern": "^https://",
+          "description": "EST server URL (must be HTTPS)",
+          "examples": ["https://est.example.com"]
+        },
+        "ca_label": {
+          "type": "string",
+          "description": "Optional CA label for multi-CA deployments",
+          "examples": ["machines", "users"]
+        },
+        "timeout_seconds": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 3600,
+          "default": 60,
+          "description": "Request timeout in seconds"
+        },
+        "channel_binding": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable TLS channel binding per RFC 7030 Section 3.5"
+        }
+      }
+    },
+    "trust": {
+      "type": "object",
+      "description": "Server certificate trust configuration",
+      "required": ["mode"],
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["webpki", "explicit", "bootstrap", "insecure"],
+          "default": "webpki",
+          "description": "Trust verification mode",
+          "markdownDescription": "- `webpki`: Use Mozilla's root CA store (default)\n- `explicit`: Use CA certificates from ca_bundle_path\n- `bootstrap`: Trust-on-first-use with fingerprint verification\n- `insecure`: Accept any certificate (TESTING ONLY)"
+        },
+        "ca_bundle_path": {
+          "type": "string",
+          "description": "Path to CA certificate bundle (PEM format). Required when mode is 'explicit'",
+          "examples": ["/etc/est/ca-bundle.pem", "C:\\ProgramData\\EST\\ca-bundle.pem"]
+        },
+        "bootstrap_fingerprint": {
+          "type": "string",
+          "pattern": "^(sha256:)?([0-9A-Fa-f]{2}:){31}[0-9A-Fa-f]{2}$|^(sha256:)?[0-9A-Fa-f]{64}$",
+          "description": "Expected CA fingerprint for bootstrap mode (SHA-256 hash)",
+          "examples": ["sha256:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89"]
+        }
+      }
+    },
+    "authentication": {
+      "type": "object",
+      "description": "Authentication configuration",
+      "required": ["method"],
+      "properties": {
+        "method": {
+          "type": "string",
+          "enum": ["none", "http_basic", "client_cert", "auto"],
+          "default": "auto",
+          "description": "Authentication method",
+          "markdownDescription": "- `none`: No authentication\n- `http_basic`: HTTP Basic authentication\n- `client_cert`: TLS client certificate\n- `auto`: Try client_cert, fallback to http_basic"
+        },
+        "username": {
+          "type": "string",
+          "description": "Username for HTTP Basic authentication. Supports variable expansion like ${COMPUTERNAME}",
+          "examples": ["${COMPUTERNAME}", "machine-account"]
+        },
+        "password_source": {
+          "type": "string",
+          "description": "Password source specification",
+          "markdownDescription": "- `env:VAR_NAME`: Read from environment variable\n- `file:/path/to/file`: Read from file\n- `credential_manager`: Use Windows Credential Manager (Windows only)",
+          "examples": ["env:EST_PASSWORD", "file:/etc/est/password.txt", "credential_manager"]
+        },
+        "cert_store": {
+          "type": "string",
+          "description": "Windows certificate store location (Windows only)",
+          "examples": ["LocalMachine\\My", "CurrentUser\\My"]
+        },
+        "cert_thumbprint": {
+          "type": "string",
+          "description": "Certificate thumbprint for client cert auth, or 'auto' for automatic selection",
+          "examples": ["auto", "AB:CD:EF:01:23:45:67:89:AB:CD:EF:01:23:45:67:89:AB:CD:EF:01"]
+        },
+        "cert_path": {
+          "type": "string",
+          "description": "Path to client certificate file (PEM format)",
+          "examples": ["/etc/est/client.pem"]
+        },
+        "key_path": {
+          "type": "string",
+          "description": "Path to client private key file (PEM format)",
+          "examples": ["/etc/est/client.key"]
+        }
+      }
+    },
+    "certificate": {
+      "type": "object",
+      "description": "Certificate request configuration",
+      "required": ["common_name"],
+      "properties": {
+        "common_name": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Common Name (CN) for certificate subject. Supports variable expansion",
+          "examples": ["${COMPUTERNAME}.${USERDNSDOMAIN}", "server.example.com"]
+        },
+        "organization": {
+          "type": "string",
+          "description": "Organization (O)",
+          "examples": ["Example Corporation"]
+        },
+        "organizational_unit": {
+          "type": "string",
+          "description": "Organizational Unit (OU)",
+          "examples": ["IT Department"]
+        },
+        "country": {
+          "type": "string",
+          "pattern": "^[A-Z]{2}$",
+          "description": "Country code (C) - ISO 3166-1 alpha-2",
+          "examples": ["US", "GB", "DE"]
+        },
+        "state": {
+          "type": "string",
+          "description": "State or Province (ST)",
+          "examples": ["Virginia", "California"]
+        },
+        "locality": {
+          "type": "string",
+          "description": "Locality or City (L)",
+          "examples": ["Arlington", "San Francisco"]
+        },
+        "san": {
+          "type": "object",
+          "description": "Subject Alternative Names (SAN)",
+          "properties": {
+            "dns": {
+              "type": "array",
+              "description": "DNS names (supports variable expansion)",
+              "items": {
+                "type": "string"
+              },
+              "examples": [["${COMPUTERNAME}.example.com", "${COMPUTERNAME}"]]
+            },
+            "ip": {
+              "type": "array",
+              "description": "IP addresses",
+              "items": {
+                "type": "string",
+                "oneOf": [
+                  { "format": "ipv4" },
+                  { "format": "ipv6" }
+                ]
+              },
+              "examples": [["192.168.1.100", "2001:db8::1"]]
+            },
+            "include_ip": {
+              "type": "boolean",
+              "default": false,
+              "description": "Automatically detect and include local IP addresses"
+            }
+          }
+        },
+        "key": {
+          "type": "object",
+          "description": "Key generation settings",
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "enum": ["ecdsa-p256", "ecdsa-p384", "rsa-2048", "rsa-3072", "rsa-4096"],
+              "default": "ecdsa-p256",
+              "description": "Key algorithm"
+            },
+            "provider": {
+              "type": "string",
+              "enum": ["software", "cng", "tpm", "pkcs11"],
+              "default": "software",
+              "description": "Key storage provider",
+              "markdownDescription": "- `software`: In-memory or file-based\n- `cng`: Windows Cryptography Next Generation\n- `tpm`: Trusted Platform Module\n- `pkcs11`: PKCS#11 HSM"
+            },
+            "non_exportable": {
+              "type": "boolean",
+              "default": true,
+              "description": "Mark private key as non-exportable (Windows CNG/TPM)"
+            },
+            "attestation": {
+              "type": "boolean",
+              "default": false,
+              "description": "Enable TPM key attestation"
+            }
+          }
+        },
+        "extensions": {
+          "type": "object",
+          "description": "Certificate extensions",
+          "properties": {
+            "key_usage": {
+              "type": "array",
+              "description": "Key usage flags",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "digital_signature",
+                  "non_repudiation",
+                  "key_encipherment",
+                  "data_encipherment",
+                  "key_agreement",
+                  "key_cert_sign",
+                  "crl_sign",
+                  "encipher_only",
+                  "decipher_only"
+                ]
+              },
+              "examples": [["digital_signature", "key_encipherment"]]
+            },
+            "extended_key_usage": {
+              "type": "array",
+              "description": "Extended key usage",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "server_auth",
+                  "client_auth",
+                  "code_signing",
+                  "email_protection",
+                  "time_stamping",
+                  "ocsp_signing",
+                  "smart_card_logon"
+                ]
+              },
+              "examples": [["client_auth"], ["server_auth", "client_auth"]]
+            }
+          }
+        }
+      }
+    },
+    "renewal": {
+      "type": "object",
+      "description": "Automatic renewal configuration",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable automatic certificate renewal"
+        },
+        "threshold_days": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 365,
+          "default": 30,
+          "description": "Days before expiration to trigger renewal"
+        },
+        "check_interval_hours": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 168,
+          "default": 6,
+          "description": "Hours between certificate expiration checks"
+        },
+        "max_retries": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 5,
+          "description": "Maximum renewal retry attempts"
+        },
+        "retry_delay_minutes": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1440,
+          "default": 30,
+          "description": "Minutes between retry attempts (base for exponential backoff)"
+        }
+      }
+    },
+    "storage": {
+      "type": "object",
+      "description": "Certificate storage configuration",
+      "properties": {
+        "windows_store": {
+          "type": "string",
+          "description": "Windows certificate store location (Windows only)",
+          "examples": ["LocalMachine\\My", "CurrentUser\\My"]
+        },
+        "friendly_name": {
+          "type": "string",
+          "description": "Friendly name for Windows certificate store (Windows only)",
+          "examples": ["EST Machine Certificate"]
+        },
+        "cert_path": {
+          "type": "string",
+          "description": "Path to store certificate file (PEM format)",
+          "examples": ["/etc/est/machine.pem", "C:\\ProgramData\\EST\\machine.pem"]
+        },
+        "key_path": {
+          "type": "string",
+          "description": "Path to store private key file (PEM format)",
+          "examples": ["/etc/est/machine.key", "C:\\ProgramData\\EST\\machine.key"]
+        },
+        "chain_path": {
+          "type": "string",
+          "description": "Path to store certificate chain (PEM format)",
+          "examples": ["/etc/est/chain.pem"]
+        },
+        "archive_old": {
+          "type": "boolean",
+          "default": false,
+          "description": "Archive old certificates instead of deleting"
+        }
+      }
+    },
+    "logging": {
+      "type": "object",
+      "description": "Logging configuration",
+      "properties": {
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"],
+          "default": "info",
+          "description": "Log level"
+        },
+        "path": {
+          "type": "string",
+          "description": "Log file path",
+          "examples": ["/var/log/est/est-enroll.log", "C:\\ProgramData\\EST\\Logs\\est-enroll.log"]
+        },
+        "windows_event_log": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable Windows Event Log integration (Windows only)"
+        },
+        "json_format": {
+          "type": "boolean",
+          "default": false,
+          "description": "Enable JSON formatted logging"
+        },
+        "max_size_mb": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1024,
+          "default": 10,
+          "description": "Maximum log file size in MB"
+        },
+        "max_files": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "default": 5,
+          "description": "Maximum number of rotated log files"
+        }
+      }
+    },
+    "service": {
+      "type": "object",
+      "description": "Windows Service configuration (Windows only)",
+      "properties": {
+        "start_type": {
+          "type": "string",
+          "enum": ["automatic", "delayed", "manual", "disabled"],
+          "default": "automatic",
+          "description": "Windows Service start type"
+        },
+        "run_as": {
+          "type": "string",
+          "default": "LocalSystem",
+          "description": "Service account",
+          "examples": ["LocalSystem", "NetworkService", "DOMAIN\\ServiceAccount"]
+        },
+        "dependencies": {
+          "type": "array",
+          "description": "Service dependencies",
+          "items": {
+            "type": "string"
+          },
+          "examples": [["Tcpip", "Dnscache"]]
+        },
+        "health_check_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535,
+          "description": "HTTP health check port (optional)",
+          "examples": [8080]
+        }
+      }
+    }
+  }
+}

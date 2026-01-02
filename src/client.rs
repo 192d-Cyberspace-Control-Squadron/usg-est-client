@@ -19,8 +19,8 @@
 //! EST servers according to RFC 7030.
 
 use base64::prelude::*;
-use reqwest::StatusCode;
 use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
+use reqwest::StatusCode;
 
 use crate::config::EstClientConfig;
 use crate::error::{EstError, Result};
@@ -29,6 +29,9 @@ use crate::types::{
     CaCertificates, CmcRequest, CmcResponse, CsrAttributes, EnrollmentResponse,
     ServerKeygenResponse, content_types, operations, parse_certs_only,
 };
+
+#[cfg(feature = "validation")]
+use crate::validation::{CertificateValidator, ValidationConfig};
 
 /// EST client for certificate enrollment operations.
 ///
@@ -305,10 +308,16 @@ impl EstClient {
             ));
         }
 
+        let cert = certs.into_iter().next().unwrap();
+
+        // Validate the certificate if validation is configured
+        #[cfg(feature = "validation")]
+        if let Some(ref validation_config) = self.config.validation_config {
+            self.validate_issued_certificate(&cert, validation_config)?;
+        }
+
         // Return the first certificate (the issued one)
-        Ok(EnrollmentResponse::issued(
-            certs.into_iter().next().unwrap(),
-        ))
+        Ok(EnrollmentResponse::issued(cert))
     }
 
     /// Add HTTP Basic auth header if configured.
@@ -474,6 +483,53 @@ impl EstClient {
             (_, None) => Err(EstError::invalid_multipart(
                 "Missing certificate in response",
             )),
+        }
+    }
+
+    /// Validate an issued certificate against the configured trust anchors.
+    ///
+    /// This method performs RFC 5280 path validation including:
+    /// - Chain building from the certificate to a trust anchor
+    /// - Validity period checking
+    /// - Name constraints validation
+    /// - Policy constraints validation
+    /// - Basic constraints checking for CA certificates
+    #[cfg(feature = "validation")]
+    fn validate_issued_certificate(
+        &self,
+        cert: &x509_cert::Certificate,
+        config: &crate::config::CertificateValidationConfig,
+    ) -> Result<()> {
+        tracing::debug!("Validating issued certificate against trust anchors");
+
+        // Create validation config
+        let validation_config = ValidationConfig {
+            max_chain_length: config.max_chain_length,
+            check_revocation: false, // Revocation checking is separate
+            enforce_name_constraints: config.enforce_name_constraints,
+            enforce_policy_constraints: config.enforce_policy_constraints,
+            allow_expired: config.allow_expired,
+        };
+
+        // Create validator with trust anchors
+        let validator = CertificateValidator::with_config(
+            config.trust_anchors.clone(),
+            validation_config,
+        );
+
+        // Validate the certificate (no intermediates - they should be in trust anchors)
+        let result = validator.validate(cert, &[])?;
+
+        if result.is_valid {
+            tracing::debug!("Certificate validation successful");
+            Ok(())
+        } else {
+            let error_msg = result.errors.join("; ");
+            tracing::warn!("Certificate validation failed: {}", error_msg);
+            Err(EstError::operational(format!(
+                "Issued certificate validation failed: {}",
+                error_msg
+            )))
         }
     }
 }

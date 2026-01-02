@@ -172,6 +172,8 @@ pub use config::{
     BootstrapConfig, ClientIdentity, EstClientConfig, EstClientConfigBuilder, HttpAuth,
     TrustAnchors,
 };
+#[cfg(feature = "validation")]
+pub use config::CertificateValidationConfig;
 pub use error::{EstError, Result};
 pub use types::{
     CaCertificates, CmcRequest, CmcResponse, CsrAttributes, EnrollmentResponse,

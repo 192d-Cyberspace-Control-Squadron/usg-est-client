@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=../../schema/est-config.schema.json
 # EST Auto-Enrollment Configuration
 # Domain workstation with Windows certificate store integration
 #

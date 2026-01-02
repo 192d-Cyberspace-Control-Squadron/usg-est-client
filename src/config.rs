@@ -22,6 +22,9 @@ use std::sync::Arc;
 use std::time::Duration;
 use url::Url;
 
+#[cfg(feature = "validation")]
+use x509_cert::Certificate;
+
 /// Configuration for an EST client.
 #[derive(Clone)]
 pub struct EstClientConfig {
@@ -55,6 +58,13 @@ pub struct EstClientConfig {
 
     /// Additional HTTP headers to include in requests.
     pub additional_headers: Vec<(String, String)>,
+
+    /// Certificate validation configuration for issued certificates.
+    ///
+    /// When enabled, issued certificates are validated against the configured
+    /// trust anchors using RFC 5280 path validation.
+    #[cfg(feature = "validation")]
+    pub validation_config: Option<CertificateValidationConfig>,
 }
 
 impl std::fmt::Debug for EstClientConfig {
@@ -82,6 +92,8 @@ impl Default for EstClientConfig {
             timeout: Duration::from_secs(30),
             channel_binding: false,
             additional_headers: Vec::new(),
+            #[cfg(feature = "validation")]
+            validation_config: None,
         }
     }
 }
@@ -120,6 +132,8 @@ pub struct EstClientConfigBuilder {
     timeout: Option<Duration>,
     channel_binding: bool,
     additional_headers: Vec<(String, String)>,
+    #[cfg(feature = "validation")]
+    validation_config: Option<CertificateValidationConfig>,
 }
 
 impl EstClientConfigBuilder {
@@ -221,6 +235,16 @@ impl EstClientConfigBuilder {
         self
     }
 
+    /// Enable certificate validation on enrollment responses.
+    ///
+    /// When enabled, issued certificates are validated against the configured
+    /// trust anchors using RFC 5280 path validation.
+    #[cfg(feature = "validation")]
+    pub fn validation_config(mut self, config: CertificateValidationConfig) -> Self {
+        self.validation_config = Some(config);
+        self
+    }
+
     /// Build the configuration.
     ///
     /// # Errors
@@ -238,6 +262,8 @@ impl EstClientConfigBuilder {
             timeout: self.timeout.unwrap_or(Duration::from_secs(30)),
             channel_binding: self.channel_binding,
             additional_headers: self.additional_headers,
+            #[cfg(feature = "validation")]
+            validation_config: self.validation_config,
         })
     }
 }
@@ -338,6 +364,77 @@ pub struct BootstrapConfig {
     /// The fingerprint is a SHA-256 hash of the DER-encoded certificate.
     /// Return `true` to accept the certificate, `false` to reject.
     pub verify_fingerprint: FingerprintVerifier,
+}
+
+/// Configuration for certificate validation on enrollment responses.
+///
+/// This allows automatic RFC 5280 path validation of issued certificates
+/// against known trust anchors.
+#[cfg(feature = "validation")]
+#[derive(Clone)]
+pub struct CertificateValidationConfig {
+    /// Trust anchors (root CA certificates) for chain validation.
+    pub trust_anchors: Vec<Certificate>,
+
+    /// Maximum allowed certificate chain length.
+    pub max_chain_length: usize,
+
+    /// Whether to enforce name constraints (RFC 5280 Section 4.2.1.10).
+    pub enforce_name_constraints: bool,
+
+    /// Whether to enforce policy constraints (RFC 5280 Section 4.2.1.11).
+    pub enforce_policy_constraints: bool,
+
+    /// Allow expired certificates (for testing only).
+    pub allow_expired: bool,
+}
+
+#[cfg(feature = "validation")]
+impl Default for CertificateValidationConfig {
+    fn default() -> Self {
+        Self {
+            trust_anchors: Vec::new(),
+            max_chain_length: 10,
+            enforce_name_constraints: true,
+            enforce_policy_constraints: true,
+            allow_expired: false,
+        }
+    }
+}
+
+#[cfg(feature = "validation")]
+impl CertificateValidationConfig {
+    /// Create a new validation config with the given trust anchors.
+    pub fn new(trust_anchors: Vec<Certificate>) -> Self {
+        Self {
+            trust_anchors,
+            ..Default::default()
+        }
+    }
+
+    /// Set maximum chain length.
+    pub fn max_chain_length(mut self, len: usize) -> Self {
+        self.max_chain_length = len;
+        self
+    }
+
+    /// Disable name constraints checking.
+    pub fn disable_name_constraints(mut self) -> Self {
+        self.enforce_name_constraints = false;
+        self
+    }
+
+    /// Disable policy constraints checking.
+    pub fn disable_policy_constraints(mut self) -> Self {
+        self.enforce_policy_constraints = false;
+        self
+    }
+
+    /// Allow expired certificates (testing only).
+    pub fn allow_expired(mut self) -> Self {
+        self.allow_expired = true;
+        self
+    }
 }
 
 #[cfg(test)]
