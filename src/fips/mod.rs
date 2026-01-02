@@ -432,12 +432,12 @@ mod tests {
 
     #[test]
     fn test_fips_config_enforced_without_feature() {
-        let config = FipsConfig::builder().enforce_fips_mode(true).build();
+        let _config = FipsConfig::builder().enforce_fips_mode(true).build();
 
         #[cfg(not(feature = "fips"))]
         {
             // Should fail when enforcing FIPS without feature
-            assert!(config.is_err());
+            assert!(_config.is_err());
         }
     }
 

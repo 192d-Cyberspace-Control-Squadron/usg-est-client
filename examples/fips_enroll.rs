@@ -23,6 +23,7 @@
 
 #![cfg(all(feature = "fips", feature = "csr-gen"))]
 
+use der::Encode;
 use std::process;
 use usg_est_client::csr::CsrBuilder;
 use usg_est_client::fips::{enable_fips_mode, fips_module_info, FipsConfig};
@@ -96,22 +97,24 @@ async fn main() {
 
     // Step 3: Create EST client configuration
     println!("\nStep 3: Creating EST client configuration...");
-    let est_config = match EstClientConfig::builder()
-        .server_url(server_url)
-        .and_then(|b| b.build())
-    {
-        Ok(mut config) => {
-            config.fips_config = Some(fips_config);
-            println!("✅ EST client configured:");
-            println!("   - Server URL: {}", config.server_url);
-            println!("   - FIPS mode: enabled");
-            config
-        }
+    let mut est_config = match EstClientConfig::builder().server_url(server_url) {
+        Ok(builder) => match builder.build() {
+            Ok(config) => config,
+            Err(e) => {
+                eprintln!("\n❌ ERROR: Failed to build config: {}", e);
+                process::exit(1);
+            }
+        },
         Err(e) => {
             eprintln!("\n❌ ERROR: Invalid server URL: {}", e);
             process::exit(1);
         }
     };
+
+    est_config.fips_config = Some(fips_config);
+    println!("✅ EST client configured:");
+    println!("   - Server URL: {}", est_config.server_url);
+    println!("   - FIPS mode: enabled");
 
     // Step 4: Create EST client
     println!("\nStep 4: Creating EST client...");
@@ -132,7 +135,8 @@ async fn main() {
         Ok(certs) => {
             println!("✅ Retrieved {} CA certificate(s)", certs.len());
             for (i, cert) in certs.iter().enumerate() {
-                println!("   Certificate {}: {} bytes (DER)", i + 1, cert.len());
+                let cert_der = cert.to_der().unwrap_or_default();
+                println!("   Certificate {}: {} bytes (DER)", i + 1, cert_der.len());
             }
             certs
         }
@@ -179,8 +183,9 @@ async fn main() {
 
     match client.simple_enroll(&csr_der).await {
         Ok(EnrollmentResponse::Issued { certificate }) => {
+            let cert_der = certificate.to_der().unwrap_or_default();
             println!("\n✅ SUCCESS: Certificate issued!");
-            println!("   Certificate size: {} bytes (DER)", certificate.len());
+            println!("   Certificate size: {} bytes (DER)", cert_der.len());
             println!("   Certificate chain includes {} certificate(s)", ca_certs.len());
             println!("\n🎉 FIPS-compliant certificate enrollment completed successfully!");
             println!("\nNext steps:");

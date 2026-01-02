@@ -9,6 +9,9 @@ categories = ["cryptography", "network-programming"]
 repository = "https://github.com/johnwillman/usg-est-client"
 readme = "README.md"
 
+[lints.rust]
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(ossl300)'] }
+
 [dependencies]
 # Async runtime
 tokio = { version = "1.48", features = ["rt-multi-thread", "sync"] }
