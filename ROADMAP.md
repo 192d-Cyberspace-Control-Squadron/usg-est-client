@@ -353,7 +353,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-### 10.2 Advanced Features (Future Roadmap)
+### 10.2 Advanced Features (Future Roadmap) ✅ COMPLETE
 
 #### 10.2.1 Automatic Certificate Renewal ✅ COMPLETE (Core Implementation)
 
@@ -464,14 +464,27 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-### 10.3 Platform Support Expansion
+### 10.3 Platform Support Expansion 🔄 IN PROGRESS
 
-#### 10.3.1 WASM Support Investigation
+#### 10.3.1 WASM Support Investigation 🔄 IN PROGRESS
 
-- [ ] Research rustls WASM compatibility
-- [ ] Research reqwest WASM compatibility
-- [ ] Identify WASM-incompatible dependencies
-- [ ] Create WASM compatibility matrix document
+- ✅ Research rustls WASM compatibility
+  - **Result**: Not compatible - depends on `ring` which has native assembly
+  - `ring` cannot be compiled to WASM targets
+  - No pure-Rust TLS alternative is mature enough
+- ✅ Research reqwest WASM compatibility
+  - **Result**: Partial support for `wasm32-unknown-unknown`
+  - Browser uses native fetch API (TLS handled by browser)
+  - Limited configuration options in WASM mode
+  - WASI support via `tokio_wasi` and patches
+- ✅ Identify WASM-incompatible dependencies
+  - **Critical blockers**: `rustls` (via `ring`), `tokio` (multi-threading)
+  - **Medium blockers**: `rcgen` (via `ring`), `cryptoki` (native FFI)
+  - **Compatible**: RustCrypto crates (`x509-cert`, `der`, `cms`, etc.)
+- ✅ Create WASM compatibility matrix document
+  - See [docs/wasm-compatibility.md](docs/wasm-compatibility.md)
+  - Detailed analysis of all dependencies
+  - Three strategies documented: Browser, WASI, Types-only
 - [ ] Evaluate alternative HTTP clients for WASM (web-sys fetch)
 - [ ] Create proof-of-concept WASM build
 - [ ] Document WASM limitations and workarounds
@@ -567,6 +580,7 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 - ✅ Add environment variable overrides for all settings (via variable expansion)
 
 **Dependencies Added**:
+
 - toml 0.8 - TOML parsing
 - serde 1.0 + serde_json - Serialization
 - dirs 5.0 - Cross-platform paths
@@ -576,6 +590,7 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 **New Feature Flag**: `auto-enroll = ["toml", "serde", "serde_json", "dirs", "hostname", "renewal", "csr-gen"]`
 
 **Key Features**:
+
 - `AutoEnrollConfig::from_toml()` - Parse TOML string
 - `AutoEnrollConfig::validate()` - Comprehensive validation
 - `AutoEnrollConfig::expand_variables()` - Variable expansion
@@ -584,6 +599,7 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 - `write_default_config(path)` - Generate template config
 
 **Files Created**:
+
 - `src/auto_enroll/mod.rs` (66 lines) - Module documentation and exports
 - `src/auto_enroll/config.rs` (963 lines) - Configuration schema and types
 - `src/auto_enroll/expand.rs` (271 lines) - Variable expansion
@@ -596,6 +612,7 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 - `docs/windows-enrollment.md` (751 lines) - Comprehensive configuration guide
 
 **Files Modified**:
+
 - `src/error.rs` - Added `EstError::Config` variant
 - `src/lib.rs` - Added `auto_enroll` module export
 - `src/csr.rs` - Fixed HSM feature gates

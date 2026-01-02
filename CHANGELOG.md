@@ -9,6 +9,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+#### Auto-Enrollment Configuration System (Phase 11.1)
+
+- **TOML Configuration File System** (`auto-enroll` feature)
+  - `AutoEnrollConfig` struct with comprehensive schema for machine enrollment
+  - Server, trust, authentication, certificate, renewal, storage, logging, service sections
+  - Variable expansion support (`${COMPUTERNAME}`, `${USERDNSDOMAIN}`, etc.)
+  - Cross-platform config file discovery with precedence rules
+  - `ConfigLoader` with builder pattern for customization
+  - See [src/auto_enroll/](src/auto_enroll/)
+
+- **JSON Schema for IDE Support**
+  - Full JSON Schema Draft-07 specification for configuration files
+  - Enables IntelliSense and validation in VS Code, IntelliJ, etc.
+  - See [schema/est-config.schema.json](schema/est-config.schema.json)
+
+- **Example Configuration Files**
+  - `examples/config/machine-cert.toml` - Basic machine certificate enrollment
+  - `examples/config/workstation.toml` - Domain workstation with auto-renewal
+  - `examples/config/server.toml` - Server certificate with multiple SANs
+  - `examples/config/kiosk.toml` - Minimal config for embedded devices
+
+- **Windows Enrollment Documentation**
+  - Comprehensive configuration guide in [docs/windows-enrollment.md](docs/windows-enrollment.md)
+  - Variable expansion reference, deployment scenarios, security considerations
+
+#### HSM and PKCS#11 Support (Phase 10.2.3-10.2.4)
+
+- **Hardware Security Module Integration** (`hsm` feature)
+  - `KeyProvider` trait for abstracting key storage
+  - `SoftwareKeyProvider` for in-memory keys (dev/test)
+  - Key generation, signing, listing, and deletion operations
+  - See [src/hsm/mod.rs](src/hsm/mod.rs)
+
+- **PKCS#11 Support** (`pkcs11` feature)
+  - `Pkcs11KeyProvider` for hardware HSM integration
+  - Support for SoftHSM, YubiHSM 2, AWS CloudHSM
+  - ECDSA P-256/P-384 and RSA 2048/3072/4096 key algorithms
+  - Automatic slot discovery or explicit slot selection
+  - See [src/hsm/pkcs11.rs](src/hsm/pkcs11.rs)
+
+#### Full CMC Implementation (Phase 10.2.6)
+
+- **Complete CMC Protocol Support**
+  - RFC 5272/5273/5274 compliant implementation
+  - `PkiDataBuilder` fluent API for constructing requests
+  - All CMC control attributes (transactionId, nonces, identification)
+  - Batch operations with `BatchRequest`/`BatchResponse`
+  - All status codes and failure info types
+  - See [src/types/cmc_full.rs](src/types/cmc_full.rs)
+
+#### Metrics Export (Phase 10.2.8)
+
+- **Prometheus/OpenTelemetry Integration** (`metrics-prometheus` feature)
+  - `PrometheusExporter` for Prometheus format output
+  - `OpenTelemetryExporter` for OpenTelemetry metrics
+  - See [src/metrics/prometheus.rs](src/metrics/prometheus.rs)
+
 #### Core EST Operations (Phase 1-9)
 
 - RFC 7030 compliant EST client implementation
@@ -78,6 +135,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Floating point precision in metrics tests
 - Unused import warnings in validation and metrics modules
 - Test data length validation in enveloped module
+- Clippy warnings for `--all-targets` compilation
+  - Added `required-features` for feature-gated examples in Cargo.toml
+  - Fixed unused imports with proper `#[cfg]` guards
+  - Converted nested `if` statements to Edition 2024 let-chain syntax
+  - Added `clap` dev-dependency for pkcs11_enroll example
 
 ### Security
 
@@ -116,11 +178,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Feature Flags
 
 - `csr-gen` (default) - CSR generation with rcgen
+- `hsm` - Hardware Security Module trait abstraction
+- `pkcs11` - PKCS#11 HSM integration (includes `hsm`)
 - `renewal` - Automatic certificate renewal
 - `validation` - RFC 5280 certificate chain validation
 - `metrics` - EST operation metrics collection
+- `metrics-prometheus` - Prometheus/OpenTelemetry exporters (includes `metrics`)
 - `revocation` - CRL and OCSP revocation checking
 - `enveloped` - CMS EnvelopedData decryption
+- `auto-enroll` - TOML configuration file system for auto-enrollment
 
 ---
 
