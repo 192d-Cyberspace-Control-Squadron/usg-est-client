@@ -32,7 +32,7 @@ use std::fs;
 use std::process::exit;
 
 use usg_est_client::{
-    csr::CsrBuilder, ClientIdentity, EnrollmentResponse, EstClient, EstClientConfig,
+    ClientIdentity, EnrollmentResponse, EstClient, EstClientConfig, csr::CsrBuilder,
 };
 
 #[tokio::main]

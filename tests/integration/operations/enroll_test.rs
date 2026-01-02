@@ -17,7 +17,7 @@
 
 use crate::integration::MockEstServer;
 use std::fs;
-use usg_est_client::{csr::CsrBuilder, EnrollmentResponse, EstClient, EstClientConfig};
+use usg_est_client::{EnrollmentResponse, EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::test]
 async fn test_successful_enrollment() {
@@ -58,11 +58,13 @@ async fn test_successful_enrollment() {
     match result.unwrap() {
         EnrollmentResponse::Issued { certificate } => {
             // Verify we got a certificate
-            assert!(!certificate
-                .tbs_certificate
-                .serial_number
-                .as_bytes()
-                .is_empty());
+            assert!(
+                !certificate
+                    .tbs_certificate
+                    .serial_number
+                    .as_bytes()
+                    .is_empty()
+            );
         }
         EnrollmentResponse::Pending { .. } => {
             panic!("Expected Issued, got Pending");

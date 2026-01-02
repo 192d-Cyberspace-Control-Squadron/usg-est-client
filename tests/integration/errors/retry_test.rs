@@ -16,7 +16,7 @@
 //! Integration tests for retry logic
 
 use crate::integration::MockEstServer;
-use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig, EstError};
+use usg_est_client::{EstClient, EstClientConfig, EstError, csr::CsrBuilder};
 
 #[tokio::test]
 async fn test_retry_after_header_parsing() {
@@ -91,8 +91,8 @@ async fn test_retry_after_zero_seconds() {
     // Test handling of Retry-After: 0 (retry immediately)
 
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     let mock = MockEstServer::start().await;
@@ -131,8 +131,8 @@ async fn test_retry_after_large_value() {
     // Test handling of very large Retry-After values
 
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     let mock = MockEstServer::start().await;
@@ -173,8 +173,8 @@ async fn test_malformed_retry_after_header() {
     // Test handling of invalid Retry-After values
 
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     let mock = MockEstServer::start().await;
@@ -213,8 +213,8 @@ async fn test_http_date_retry_after() {
     // e.g., "Retry-After: Fri, 31 Dec 2024 23:59:59 GMT"
 
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     let mock = MockEstServer::start().await;

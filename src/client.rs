@@ -19,15 +19,15 @@
 //! EST servers according to RFC 7030.
 
 use base64::prelude::*;
-use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 use reqwest::StatusCode;
+use reqwest::header::{AUTHORIZATION, CONTENT_TYPE};
 
 use crate::config::EstClientConfig;
 use crate::error::{EstError, Result};
 use crate::tls::build_http_client;
 use crate::types::{
-    content_types, operations, parse_certs_only, CaCertificates, CmcRequest, CmcResponse,
-    CsrAttributes, EnrollmentResponse, ServerKeygenResponse,
+    CaCertificates, CmcRequest, CmcResponse, CsrAttributes, EnrollmentResponse,
+    ServerKeygenResponse, content_types, operations, parse_certs_only,
 };
 
 /// EST client for certificate enrollment operations.

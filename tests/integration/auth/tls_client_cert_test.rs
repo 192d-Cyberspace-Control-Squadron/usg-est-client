@@ -17,7 +17,7 @@
 
 use crate::integration::MockEstServer;
 use std::fs;
-use usg_est_client::{csr::CsrBuilder, ClientIdentity, EstClient, EstClientConfig};
+use usg_est_client::{ClientIdentity, EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::test]
 async fn test_successful_tls_client_cert_auth() {

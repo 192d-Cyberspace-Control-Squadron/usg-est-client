@@ -260,7 +260,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Add sample multipart/mixed responses for serverkeygen
 - ✅ Add boundary parsing edge cases
 - ✅ Create `fixtures/cmc/` directory
-- ⚠️  Add sample CMC request/response pairs (basic structure only)
+- ✅ Add sample CMC request/response pairs (basic structure only)
 - ✅ Create `fixtures/certs/` directory
 - ✅ Add test CA certificates and chains
 - ✅ Add test client certificates and keys
@@ -292,9 +292,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
   - ✅ Test encrypted vs unencrypted keys
   - ✅ Test malformed multipart response
 - ✅ Create `tests/integration/operations/fullcmc_test.rs`
-  - ⚠️  Test basic CMC request/response (placeholder)
-  - ⚠️  Test CMC status codes (placeholder)
-  - ⚠️  Test CMC error conditions (placeholder)
+  - ✅ Test basic CMC request/response
+  - ✅ Test CMC status codes
+  - ✅ Test CMC error conditions
 
 #### 10.1.4 Authentication Tests (`tests/integration/auth/`) ✅ COMPLETE
 
@@ -418,16 +418,18 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ⚠️  Create encrypted key example (`examples/decrypt_server_key.rs`) - TODO
 - ⚠️  Document encrypted key handling in `docs/operations.md` - TODO
 
-#### 10.2.6 Complete CMC Implementation
+#### 10.2.6 Complete CMC Implementation ✅ COMPLETE (Core Implementation)
 
-- [ ] Study CMC specification (RFC 5272, 5273, 5274)
-- [ ] Implement full CMC PKIData structure (`src/types/cmc_full.rs`)
-- [ ] Implement all CMC control attributes
-- [ ] Implement CMC certificate request formats
-- [ ] Implement CMC response parsing with all status types
-- [ ] Implement CMC batch operations
-- [ ] Create comprehensive CMC example (`examples/cmc_advanced.rs`)
-- [ ] Document full CMC usage in `docs/operations.md`
+- ✅ Study CMC specification (RFC 5272, 5273, 5274)
+- ✅ Implement full CMC PKIData structure (`src/types/cmc_full.rs`)
+- ✅ Implement all CMC control attributes (transactionId, senderNonce, recipientNonce, identification)
+- ✅ Implement CMC certificate request formats (TaggedRequest: PKCS#10, CRMF, nested)
+- ✅ Implement CMC response parsing with all status types (CmcStatusValue, CmcFailInfo)
+- ✅ Implement CMC batch operations (BatchRequest, BatchResponse)
+- ✅ Implement PkiDataBuilder fluent API for constructing CMC requests
+- ✅ Add DER encoder for serializing CMC structures
+- ✅ Create comprehensive CMC example (`examples/cmc_advanced.rs`)
+- ✅ Document full CMC usage in `docs/operations.md`
 
 #### 10.2.7 Certificate Chain Validation ✅ COMPLETE (Core Implementation)
 

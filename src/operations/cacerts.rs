@@ -96,10 +96,10 @@ pub fn get_common_name(cert: &Certificate) -> Option<String> {
 
     for rdn in cert.tbs_certificate.subject.0.iter() {
         for atv in rdn.0.iter() {
-            if atv.oid == CN {
-                if let Ok(s) = std::str::from_utf8(atv.value.value()) {
-                    return Some(s.to_string());
-                }
+            if atv.oid == CN
+                && let Ok(s) = std::str::from_utf8(atv.value.value())
+            {
+                return Some(s.to_string());
             }
         }
     }

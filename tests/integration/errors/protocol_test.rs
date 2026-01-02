@@ -16,7 +16,7 @@
 //! Integration tests for protocol error handling
 
 use crate::integration::MockEstServer;
-use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
+use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::test]
 async fn test_invalid_content_type() {
@@ -63,8 +63,8 @@ async fn test_missing_required_headers() {
     // Mock pending response without Retry-After header
     // (This would be a protocol violation)
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     Mock::given(method("POST"))
@@ -137,8 +137,8 @@ async fn test_unexpected_http_methods() {
 #[tokio::test]
 async fn test_http_status_code_handling() {
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     // Start mock server
@@ -184,8 +184,8 @@ async fn test_http_status_code_handling() {
 #[tokio::test]
 async fn test_empty_response_body() {
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     // Start mock server
@@ -230,8 +230,8 @@ async fn test_oversized_response() {
 #[tokio::test]
 async fn test_redirect_handling() {
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     // Start mock server
@@ -277,8 +277,8 @@ async fn test_content_encoding_handling() {
 #[tokio::test]
 async fn test_missing_content_type_header() {
     use wiremock::{
-        matchers::{method, path},
         Mock, ResponseTemplate,
+        matchers::{method, path},
     };
 
     // Start mock server

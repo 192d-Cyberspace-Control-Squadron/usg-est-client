@@ -25,7 +25,7 @@ use url::Url;
 use x509_cert::Certificate;
 
 use crate::error::{EstError, Result};
-use crate::types::{operations, parse_certs_only, CaCertificates};
+use crate::types::{CaCertificates, operations, parse_certs_only};
 
 /// Bootstrap client for initial CA certificate discovery.
 ///
@@ -197,10 +197,10 @@ impl BootstrapClient {
 
         for rdn in cert.tbs_certificate.subject.0.iter() {
             for atv in rdn.0.iter() {
-                if atv.oid == CN {
-                    if let Ok(s) = std::str::from_utf8(atv.value.value()) {
-                        return Some(s.to_string());
-                    }
+                if atv.oid == CN
+                    && let Ok(s) = std::str::from_utf8(atv.value.value())
+                {
+                    return Some(s.to_string());
                 }
             }
         }

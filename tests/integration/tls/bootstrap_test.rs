@@ -146,7 +146,9 @@ async fn test_fingerprint_parsing_invalid() {
     assert!(result.is_err(), "Should reject too-short fingerprint");
 
     // Invalid hex
-    let result = BootstrapClient::parse_fingerprint("ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ");
+    let result = BootstrapClient::parse_fingerprint(
+        "ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ:ZZ",
+    );
     assert!(result.is_err(), "Should reject invalid hex");
 
     // Wrong format (no colons)

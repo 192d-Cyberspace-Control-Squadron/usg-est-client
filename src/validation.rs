@@ -174,10 +174,10 @@ impl CertificateValidator {
             debug!("Validating certificate {}/{}", i + 1, chain.len());
 
             // Check expiration
-            if !self.config.allow_expired {
-                if let Err(e) = self.check_validity_period(cert) {
-                    errors.push(format!("Certificate {} invalid: {}", i, e));
-                }
+            if !self.config.allow_expired
+                && let Err(e) = self.check_validity_period(cert)
+            {
+                errors.push(format!("Certificate {} invalid: {}", i, e));
             }
 
             // Check basic constraints
@@ -212,10 +212,10 @@ impl CertificateValidator {
         }
 
         // Step 5: Verify root certificate is trusted
-        if let Some(root) = chain.last() {
-            if !self.is_trusted_root(root) {
-                errors.push("Root certificate is not in trust store".to_string());
-            }
+        if let Some(root) = chain.last()
+            && !self.is_trusted_root(root)
+        {
+            errors.push("Root certificate is not in trust store".to_string());
         }
 
         // Step 6: Check revocation status (if enabled)
@@ -373,10 +373,10 @@ pub fn get_subject_cn(cert: &Certificate) -> Option<String> {
 
     for rdn in cert.tbs_certificate.subject.0.iter() {
         for atv in rdn.0.iter() {
-            if atv.oid == CN {
-                if let Ok(s) = std::str::from_utf8(atv.value.value()) {
-                    return Some(s.to_string());
-                }
+            if atv.oid == CN
+                && let Ok(s) = std::str::from_utf8(atv.value.value())
+            {
+                return Some(s.to_string());
             }
         }
     }

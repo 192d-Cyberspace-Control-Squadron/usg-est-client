@@ -18,7 +18,7 @@
 use crate::integration::MockEstServer;
 use std::fs;
 use usg_est_client::{
-    csr::CsrBuilder, ClientIdentity, EnrollmentResponse, EstClient, EstClientConfig,
+    ClientIdentity, EnrollmentResponse, EstClient, EstClientConfig, csr::CsrBuilder,
 };
 
 #[tokio::test]

@@ -76,6 +76,9 @@ use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 
+/// Type alias for the key storage map: key_id -> (KeyPair, KeyMetadata)
+type KeyStorage = Arc<RwLock<HashMap<Vec<u8>, (KeyPair, KeyMetadata)>>>;
+
 /// Software-based key provider that stores keys in memory.
 ///
 /// This implementation uses [`rcgen`] for key generation and signing operations.
@@ -87,7 +90,7 @@ use std::sync::{Arc, RwLock};
 #[derive(Clone)]
 pub struct SoftwareKeyProvider {
     /// Internal key storage: key_id -> (KeyPair, KeyMetadata)
-    keys: Arc<RwLock<HashMap<Vec<u8>, (KeyPair, KeyMetadata)>>>,
+    keys: KeyStorage,
 
     /// Counter for generating unique key IDs
     next_id: Arc<RwLock<u64>>,
@@ -251,7 +254,7 @@ impl KeyProvider for SoftwareKeyProvider {
         // the recommended way to use software keys.
         let _ = (handle, data);
         Err(EstError::not_supported(
-            "Direct signing not supported for software keys. Use rcgen's KeyPair with CertificateParams for CSR generation."
+            "Direct signing not supported for software keys. Use rcgen's KeyPair with CertificateParams for CSR generation.",
         ))
     }
 
@@ -449,10 +452,12 @@ mod tests {
             .await;
 
         assert!(result.is_err());
-        assert!(result
-            .unwrap_err()
-            .to_string()
-            .contains("Unsupported RSA key size"));
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("Unsupported RSA key size")
+        );
     }
 
     #[tokio::test]

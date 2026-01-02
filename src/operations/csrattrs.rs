@@ -64,7 +64,7 @@ pub fn describe_requirements(attrs: &CsrAttributes) -> Vec<String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::csr_attrs::{oids, CsrAttribute};
+    use crate::types::csr_attrs::{CsrAttribute, oids};
 
     #[test]
     fn test_requires_challenge_password() {

@@ -105,8 +105,8 @@ fn generate_test_certs() -> Result<TestCerts, Box<dyn std::error::Error>> {
     })
 }
 
-fn generate_ca_cert(
-) -> Result<(Certificate, KeyPair, CertificateParams), Box<dyn std::error::Error>> {
+fn generate_ca_cert()
+-> Result<(Certificate, KeyPair, CertificateParams), Box<dyn std::error::Error>> {
     let mut params = CertificateParams::default();
 
     let mut dn = DistinguishedName::new();

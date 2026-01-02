@@ -20,8 +20,8 @@
 
 use std::sync::Arc;
 
-use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 use rustls::ClientConfig;
+use rustls::pki_types::{CertificateDer, PrivateKeyDer};
 
 use crate::config::{ClientIdentity, EstClientConfig, TrustAnchors};
 use crate::error::{EstError, Result};

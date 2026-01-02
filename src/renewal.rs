@@ -46,8 +46,8 @@
 //! # }
 //! ```
 
-use crate::error::{EstError, Result};
 use crate::EstClient;
+use crate::error::{EstError, Result};
 use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
@@ -173,7 +173,7 @@ pub enum RenewalEvent {
     /// Renewal succeeded.
     RenewalSucceeded {
         /// The newly issued certificate.
-        certificate: Certificate,
+        certificate: Box<Certificate>,
     },
 
     /// Renewal failed.

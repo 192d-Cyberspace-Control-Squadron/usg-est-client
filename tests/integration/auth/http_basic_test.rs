@@ -17,7 +17,7 @@
 
 use crate::integration::MockEstServer;
 use std::fs;
-use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
+use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::test]
 async fn test_successful_http_basic_auth() {

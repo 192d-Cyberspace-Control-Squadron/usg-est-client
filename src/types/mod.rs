@@ -19,12 +19,18 @@
 //! including PKCS#7/CMS structures, CSR attributes, and CMC messages.
 
 mod cmc;
+pub mod cmc_full;
 pub mod csr_attrs;
 mod pkcs7;
 
 pub use cmc::{CmcRequest, CmcResponse, CmcStatus};
+pub use cmc_full::{
+    BatchRequest, BatchResponse, BodyPartId, CmcFailInfo, CmcStatusInfo, CmcStatusValue,
+    PendingInfo, PkiData, PkiDataBuilder, PkiResponse, TaggedAttribute, TaggedCertificationRequest,
+    TaggedRequest,
+};
 pub use csr_attrs::CsrAttributes;
-pub use pkcs7::{parse_certs_only, CaCertificates};
+pub use pkcs7::{CaCertificates, parse_certs_only};
 
 use x509_cert::Certificate;
 

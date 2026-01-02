@@ -392,55 +392,433 @@ std::fs::write("private-key.pem", pem)?;
 
 ## Full CMC (`/fullcmc`)
 
-Support for complex PKI operations using Certificate Management over CMS.
+Support for complex PKI operations using Certificate Management over CMS (CMC). Full CMC provides advanced features beyond simple enrollment, including batch operations, transaction tracking, and comprehensive status reporting.
 
-### Usage
+### Overview
+
+Full CMC (RFC 5272) is an optional EST operation that enables:
+
+- **Multiple certificate requests** in a single transaction
+- **Transaction tracking** with IDs and nonces
+- **Detailed status reporting** with specific failure codes
+- **Batch operations** for multiple enrollment requests
+- **Advanced controls** for identity proof, POP, and revocation
+
+⚠️ **Note**: Full CMC is optional in EST. Many servers only support simple enrollment. Always check server capabilities first.
+
+### Basic Usage
 
 ```rust
-use usg_est_client::{CmcRequest, CmcResponse};
+use usg_est_client::{
+    CmcRequest,
+    types::cmc_full::{PkiDataBuilder, PkiResponse},
+};
 
-// Create CMC request (requires CMC message construction)
-let cmc_request = CmcRequest::new(cmc_data);
+// Generate a CSR
+let (csr_der, _key) = CsrBuilder::new()
+    .common_name("device.example.com")
+    .build()?;
 
-// Submit CMC request
+// Build CMC PKIData request
+let pki_data = PkiDataBuilder::new()
+    .transaction_id(12345)              // Unique transaction ID
+    .random_sender_nonce()               // Random nonce for replay protection
+    .identification("client-001".to_string())  // Human-readable identifier
+    .add_certification_request(csr_der)  // Add PKCS#10 CSR
+    .build()?;
+
+// Encode to DER
+let pki_data_der = pki_data.to_der()?;
+
+// Wrap in CmcRequest
+let cmc_request = CmcRequest::new(pki_data_der);
+
+// Submit to EST server
 let cmc_response = client.full_cmc(&cmc_request).await?;
 
+// Check response status
 if cmc_response.is_success() {
-    println!("CMC operation successful");
+    println!("CMC request successful!");
+    println!("Certificates: {}", cmc_response.certificates.len());
 } else {
-    println!("CMC operation status: {:?}", cmc_response.status);
+    println!("Status: {:?}", cmc_response.status);
 }
 ```
 
-### CMC Status Codes
+### PKIData Structure
+
+The `PkiData` structure is the main CMC request message:
 
 ```rust
-use usg_est_client::CmcStatus;
-
-match cmc_response.status {
-    CmcStatus::Success => println!("Operation successful"),
-    CmcStatus::Failed => println!("Operation failed"),
-    CmcStatus::Pending => println!("Operation pending"),
-    CmcStatus::NoSupport => println!("Operation not supported"),
-    CmcStatus::ConfirmRequired => println!("Confirmation required"),
-    CmcStatus::PopRequired => println!("Proof of possession required"),
-    CmcStatus::Partial => println!("Partial success"),
+pub struct PkiData {
+    pub control_sequence: Vec<TaggedAttribute>,    // Control attributes
+    pub req_sequence: Vec<TaggedRequest>,          // Certificate requests
+    pub cms_sequence: Vec<Vec<u8>>,                // CMS content
+    pub other_msg_sequence: Vec<OtherMsg>,         // Extension messages
 }
 ```
 
-### CMC Operations
+### Building CMC Requests with PkiDataBuilder
 
-Full CMC supports advanced operations:
+The fluent builder API simplifies CMC message construction:
 
-- Certificate revocation requests
-- Certificate modification
-- Identity proof mechanisms
-- Proof of possession
+```rust
+use usg_est_client::types::cmc_full::PkiDataBuilder;
 
-### RFC Reference
+let pki_data = PkiDataBuilder::new()
+    // Transaction tracking
+    .transaction_id(98765)
+    .sender_nonce(vec![0x01, 0x02, 0x03, 0x04])
 
-- RFC 7030 Section 4.3: Full CMC
-- RFC 5272: Certificate Management over CMS (CMC)
+    // Client identification
+    .identification("device-enrollment-123".to_string())
+
+    // Add certificate requests
+    .add_certification_request(csr1_der)
+    .add_certification_request(csr2_der)
+
+    // Build the PKIData
+    .build()?;
+
+// Serialize to DER for transmission
+let der_bytes = pki_data.to_der()?;
+```
+
+### Control Attributes
+
+CMC control attributes provide metadata and transaction management:
+
+#### Transaction ID
+
+Unique identifier for tracking requests and responses:
+
+```rust
+use usg_est_client::types::cmc_full::{TaggedAttribute, BodyPartId};
+
+let tx_id = TaggedAttribute::transaction_id(
+    BodyPartId::new(1),
+    12345
+);
+```
+
+#### Sender Nonce
+
+Random value for replay protection:
+
+```rust
+let nonce = TaggedAttribute::sender_nonce(
+    BodyPartId::new(2),
+    vec![0xAA, 0xBB, 0xCC, 0xDD]
+);
+
+// Or use random nonce generation
+let pki_data = PkiDataBuilder::new()
+    .random_sender_nonce()  // Generates cryptographically random nonce
+    .build()?;
+```
+
+#### Identification
+
+Human-readable client identifier:
+
+```rust
+let ident = TaggedAttribute::identification(
+    BodyPartId::new(3),
+    "engineering-device-001".to_string()
+);
+```
+
+#### Available Control OIDs
+
+```rust
+use usg_est_client::types::cmc_full::oid;
+
+// Core controls
+oid::TRANSACTION_ID     // 1.3.6.1.5.5.7.7.5
+oid::SENDER_NONCE       // 1.3.6.1.5.5.7.7.6
+oid::RECIPIENT_NONCE    // 1.3.6.1.5.5.7.7.7
+oid::IDENTIFICATION     // 1.3.6.1.5.5.7.7.2
+
+// Status and response
+oid::STATUS_INFO        // 1.3.6.1.5.5.7.7.1
+oid::QUERY_PENDING      // 1.3.6.1.5.5.7.7.21
+
+// Advanced operations
+oid::REVOKE_REQUEST     // 1.3.6.1.5.5.7.7.17
+oid::GET_CERT           // 1.3.6.1.5.5.7.7.15
+oid::GET_CRL            // 1.3.6.1.5.5.7.7.16
+```
+
+### Batch Operations
+
+Submit multiple certificate requests in a single transaction:
+
+```rust
+use usg_est_client::types::cmc_full::BatchRequest;
+
+let mut batch = BatchRequest::new();
+
+// Web server certificate
+let pki_data1 = PkiDataBuilder::new()
+    .transaction_id(1001)
+    .add_certification_request(webserver_csr)
+    .build()?;
+batch.add_request(pki_data1);
+
+// Client authentication certificate
+let pki_data2 = PkiDataBuilder::new()
+    .transaction_id(1002)
+    .add_certification_request(client_csr)
+    .build()?;
+batch.add_request(pki_data2);
+
+// Email signing certificate
+let pki_data3 = PkiDataBuilder::new()
+    .transaction_id(1003)
+    .add_certification_request(email_csr)
+    .build()?;
+batch.add_request(pki_data3);
+
+// Encode the entire batch
+let batch_der = batch.to_der()?;
+
+// Submit to server
+let cmc_request = CmcRequest::new(batch_der);
+let cmc_response = client.full_cmc(&cmc_request).await?;
+```
+
+### PKIResponse Parsing
+
+Parse detailed response information:
+
+```rust
+use usg_est_client::types::cmc_full::PkiResponse;
+
+let pki_response = PkiResponse::from_der(&cmc_response.data)?;
+
+// Check status
+if pki_response.is_success() {
+    println!("All requests succeeded");
+    println!("Certificates: {}", pki_response.certificates.len());
+} else if pki_response.is_pending() {
+    println!("Requests are pending manual approval");
+} else if let Some(fail_info) = pki_response.fail_info() {
+    println!("Request failed: {}", fail_info.description());
+}
+```
+
+### CMC Status Values
+
+Comprehensive status reporting:
+
+```rust
+use usg_est_client::types::cmc_full::{CmcStatusValue, CmcStatusInfo};
+
+pub enum CmcStatusValue {
+    Success = 0,           // Request granted
+    Failed = 2,            // Request failed (see failInfo)
+    Pending = 3,           // Awaiting approval
+    NoSupport = 4,         // Operation not supported
+    ConfirmRequired = 5,   // Confirmation needed
+    PopRequired = 6,       // Proof of possession required
+    Partial = 7,           // Some requests succeeded
+}
+
+// Check status
+if status.is_success() {
+    println!("Operation completed successfully");
+} else if status.is_failure() {
+    println!("Operation failed");
+} else if status.is_pending() {
+    println!("Operation is pending");
+}
+```
+
+### CMC Failure Codes
+
+Detailed failure information:
+
+```rust
+use usg_est_client::types::cmc_full::CmcFailInfo;
+
+pub enum CmcFailInfo {
+    BadAlgorithm = 0,       // Unsupported algorithm
+    BadMessageCheck = 1,    // Signature verification failed
+    BadRequest = 2,         // Malformed request
+    BadTime = 3,            // Request time invalid/expired
+    BadCertId = 4,          // Invalid certificate ID
+    UnsupportedExt = 5,     // Unsupported extension
+    MustArchiveKeys = 6,    // Key archival required
+    BadIdentity = 7,        // Identity verification failed
+    PopRequired = 8,        // Proof of possession required
+    PopFailed = 9,          // POP verification failed
+    NoKeyReuse = 10,        // Key reuse not allowed
+    InternalCaError = 11,   // Internal CA error
+    TryLater = 12,          // Server busy, retry
+    AuthDataFail = 13,      // Authentication failed
+}
+
+// Get human-readable description
+let description = fail_info.description();
+println!("Failure reason: {}", description);
+```
+
+### Status Info Structure
+
+```rust
+use usg_est_client::types::cmc_full::{CmcStatusInfo, BodyPartId};
+
+pub struct CmcStatusInfo {
+    pub status: CmcStatusValue,
+    pub body_list: Vec<BodyPartId>,      // Affected request parts
+    pub status_string: Option<String>,   // Human-readable message
+    pub fail_info: Option<CmcFailInfo>,  // Failure details
+    pub pending_info: Option<PendingInfo>, // Pending operation info
+}
+
+// Create status info
+let success = CmcStatusInfo::success(vec![BodyPartId::new(1)]);
+
+let failed = CmcStatusInfo::failed(
+    vec![BodyPartId::new(2)],
+    CmcFailInfo::BadRequest
+);
+
+let pending = CmcStatusInfo::pending(
+    vec![BodyPartId::new(3)],
+    PendingInfo {
+        pending_token: vec![0x01, 0x02],
+        pending_time: Some(3600), // Retry after 1 hour
+    }
+);
+```
+
+### Body Part IDs
+
+Reference specific parts of CMC messages:
+
+```rust
+use usg_est_client::types::cmc_full::BodyPartId;
+
+// Create body part ID
+let id = BodyPartId::new(42);
+
+// Get numeric value
+let value = id.value(); // Returns: 42
+
+// Used to link controls to requests
+let control = TaggedAttribute::transaction_id(
+    BodyPartId::new(1),  // References this body part
+    12345
+);
+```
+
+### Complete Example
+
+See the comprehensive example in `examples/cmc_advanced.rs`:
+
+```bash
+# Run the CMC example (demonstrates all features)
+cargo run --example cmc_advanced --features csr-gen
+
+# Attempt live CMC request to a server
+cargo run --example cmc_advanced --features csr-gen -- \
+    --server https://est.example.com \
+    --live
+```
+
+The example demonstrates:
+
+- Building PKIData with multiple controls
+- Batch operations with 3 certificate requests
+- Status value and failure code handling
+- All available control attributes
+- Live server communication (optional)
+
+### Request Format
+
+- **Method**: POST
+- **Content-Type**: `application/pkcs7-mime; smime-type=CMC-Request`
+- **Body**: Base64-encoded CMC PKIData
+- **Authentication**: Optional (HTTP Basic or TLS client certificate)
+
+### Response Format
+
+- **HTTP 200**: Success
+- **Content-Type**: `application/pkcs7-mime; smime-type=CMC-Response`
+- **Body**: Base64-encoded CMC PKIResponse
+
+### CMC Use Cases
+
+#### Multiple Certificate Requests
+
+```rust
+// Request certificates for multiple purposes in one transaction
+let batch = BatchRequest::new();
+batch.add_request(build_tls_server_request()?);
+batch.add_request(build_tls_client_request()?);
+batch.add_request(build_email_signing_request()?);
+```
+
+#### Certificate Revocation
+
+```rust
+// Use revocation control (requires server support)
+use usg_est_client::types::cmc_full::oid;
+
+let revoke_control = TaggedAttribute::new(
+    BodyPartId::new(1),
+    oid::REVOKE_REQUEST,
+    revocation_data
+);
+```
+
+#### Transaction Tracking
+
+```rust
+// Use transaction ID and nonces for reliable tracking
+let pki_data = PkiDataBuilder::new()
+    .transaction_id(generate_unique_id())
+    .random_sender_nonce()
+    .build()?;
+
+// Server will include recipient nonce in response
+// for correlation and replay protection
+```
+
+### CMC Server Support
+
+Full CMC is **optional** in EST. Check server support:
+
+```rust
+// Attempt CMC operation
+match client.full_cmc(&cmc_request).await {
+    Ok(response) => {
+        // Server supports Full CMC
+        println!("CMC supported: {:?}", response.status);
+    }
+    Err(EstError::ServerError { status: 501, .. }) => {
+        println!("Server does not support Full CMC (501 Not Implemented)");
+        println!("Fall back to simple enrollment");
+    }
+    Err(e) => return Err(e.into()),
+}
+```
+
+### Security Considerations
+
+- **Authentication**: Full CMC requests should use strong authentication (TLS client certificates preferred)
+- **Replay Protection**: Always include sender nonce for replay attack prevention
+- **Transaction IDs**: Use cryptographically random or sequentially unique transaction IDs
+- **Signature Verification**: Servers SHOULD verify request signatures
+- **Authorization**: Servers MUST verify client authorization for requested operations
+
+### RFC References
+
+- **RFC 7030 Section 4.3**: Full CMC in EST
+- **RFC 5272**: Certificate Management over CMS (CMC)
+- **RFC 5273**: CMC Transport Protocols
+- **RFC 5274**: CMC Compliance Requirements
 
 ---
 

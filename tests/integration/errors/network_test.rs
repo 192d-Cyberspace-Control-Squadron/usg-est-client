@@ -16,7 +16,7 @@
 //! Integration tests for network error handling
 
 use std::time::Duration;
-use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
+use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::test]
 async fn test_connection_timeout() {

@@ -26,7 +26,7 @@
 use std::env;
 use std::process::exit;
 
-use usg_est_client::{csr::CsrBuilder, EnrollmentResponse, EstClient, EstClientConfig};
+use usg_est_client::{EnrollmentResponse, EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::main]
 async fn main() {

@@ -17,7 +17,7 @@
 
 use crate::integration::MockEstServer;
 use std::fs;
-use usg_est_client::{csr::CsrBuilder, EstClient, EstClientConfig};
+use usg_est_client::{EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::test]
 async fn test_successful_serverkeygen() {
@@ -66,12 +66,14 @@ async fn test_successful_serverkeygen() {
 
     // Assert: Should succeed with certificate and private key
     let response = result.unwrap();
-    assert!(!response
-        .certificate
-        .tbs_certificate
-        .serial_number
-        .as_bytes()
-        .is_empty());
+    assert!(
+        !response
+            .certificate
+            .tbs_certificate
+            .serial_number
+            .as_bytes()
+            .is_empty()
+    );
     assert!(!response.private_key.is_empty());
 }
 
@@ -125,7 +127,8 @@ async fn test_encrypted_vs_unencrypted_keys() {
 
         // Test 3: Not a valid key structure (no SEQUENCE tag)
         let not_a_key = vec![
-            0x04, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // OCTET STRING, not SEQUENCE (10 bytes)
+            0x04, 0x10, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, // OCTET STRING, not SEQUENCE (10 bytes)
         ];
         assert!(
             !is_encrypted_key(&not_a_key),
