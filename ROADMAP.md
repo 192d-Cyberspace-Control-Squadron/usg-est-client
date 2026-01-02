@@ -303,26 +303,26 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
   - ✅ Test missing client certificate
   - ✅ Test invalid client certificate
   - ✅ Test certificate chain validation
-- [ ] Create `tests/integration/auth/http_basic_test.rs`
-  - [ ] Test successful HTTP Basic auth
-  - [ ] Test invalid credentials
-  - [ ] Test missing Authorization header
+- ✅ Create `tests/integration/auth/http_basic_test.rs`
+  - ✅ Test successful HTTP Basic auth
+  - ✅ Test invalid credentials
+  - ✅ Test missing Authorization header
 
 #### 10.1.5 TLS Configuration Tests (`tests/integration/tls/`) ✅ COMPLETE
 
-- [ ] Create `tests/integration/tls/config_test.rs`
-  - [ ] Test TLS 1.2 minimum version enforcement
-  - [ ] Test TLS 1.3 support
-  - [ ] Test certificate verification with WebPKI roots
-  - [ ] Test certificate verification with explicit trust anchors
-  - [ ] Test hostname verification
-  - [ ] Test insecure mode (for testing only)
-- [ ] Create `tests/integration/tls/bootstrap_test.rs`
-  - [ ] Test bootstrap mode CA cert retrieval
-  - [ ] Test fingerprint computation
-  - [ ] Test fingerprint formatting
-  - [ ] Test fingerprint verification callback
-  - [ ] Test TOFU flow end-to-end
+- ✅ Create `tests/integration/tls/config_test.rs`
+  - ✅ Test TLS 1.2 minimum version enforcement
+  - ✅ Test TLS 1.3 support
+  - ✅ Test certificate verification with WebPKI roots
+  - ✅ Test certificate verification with explicit trust anchors
+  - ✅ Test hostname verification
+  - ✅ Test insecure mode (for testing only)
+- ✅ Create `tests/integration/tls/bootstrap_test.rs`
+  - ✅ Test bootstrap mode CA cert retrieval
+  - ✅ Test fingerprint computation
+  - ✅ Test fingerprint formatting
+  - ✅ Test fingerprint verification callback
+  - ✅ Test TOFU flow end-to-end
 
 #### 10.1.6 Error Handling Tests (`tests/integration/errors/`) ✅ COMPLETE
 
