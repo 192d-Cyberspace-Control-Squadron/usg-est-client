@@ -392,8 +392,8 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Add KeyHandle, KeyAlgorithm, and KeyMetadata types
 - ✅ Add `hsm` feature flag to `Cargo.toml`
 - ✅ Create HSM example (`examples/hsm_enroll.rs`)
-- ⚠️  Implement HSM-backed CSR generation (needs CsrBuilder integration) - TODO
-- ⚠️  Document HSM usage in `docs/configuration.md` - TODO
+- ✅ Implement HSM-backed CSR generation (HsmCsrBuilder in `src/csr.rs`)
+- ✅ Document HSM usage in `docs/configuration.md`
 
 #### 10.2.4 PKCS#11 Support ✅ COMPLETE
 
@@ -408,19 +408,19 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Add PKCS#11 security considerations to `docs/security.md`
 - ✅ Document SoftHSM, YubiHSM, and AWS CloudHSM support
 
-#### 10.2.5 Encrypted Private Key Decryption ✅ COMPLETE (Core Implementation)
+#### 10.2.5 Encrypted Private Key Decryption ✅ COMPLETE
 
 - ✅ Implement CMS EnvelopedData parsing framework (`src/enveloped.rs`)
 - ✅ Add support for common encryption algorithms (AES-128/192/256, 3DES)
 - ✅ Implement recipient info structure
 - ✅ Add decrypt_enveloped_data() API
 - ✅ Implement is_encrypted_key() heuristic checker
-- ⚠️  Complete CMS ContentInfo parsing - TODO
-- ⚠️  Implement actual symmetric decryption (AES, 3DES) - TODO
-- ⚠️  Implement key unwrapping for recipient info - TODO
-- ⚠️  Add key decryption interface to `ServerKeygenResponse` - TODO
-- ⚠️  Create encrypted key example (`examples/decrypt_server_key.rs`) - TODO
-- ⚠️  Document encrypted key handling in `docs/operations.md` - TODO
+- ✅ Complete CMS ContentInfo parsing (raw TLV parsing approach)
+- ✅ Implement actual symmetric decryption with cbc/aes/des crates
+- ✅ Implement RecipientInfo parsing for KeyTransRecipientInfo
+- ✅ Document encrypted key handling in `docs/operations.md`
+- Future: Add key decryption interface to `ServerKeygenResponse`
+- Future: Create encrypted key example (`examples/decrypt_server_key.rs`)
 
 #### 10.2.6 Complete CMC Implementation ✅ COMPLETE (Core Implementation)
 
@@ -499,6 +499,474 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
+---
+
+## Phase 11: Windows Auto-Enrollment (ADCS Replacement) 📋 PLANNED
+
+This phase implements a complete Windows auto-enrollment solution to replace Microsoft Active Directory Certificate Services (ADCS) auto-enrollment with EST-based certificate management.
+
+### 11.1 Configuration File System
+
+#### 11.1.1 Config Schema Design
+
+- [ ] Design TOML configuration schema for machine enrollment
+- [ ] Create `src/config/file.rs` for config file parsing
+- [ ] Define `AutoEnrollConfig` struct with all sections:
+  - `[server]` - EST server URL, CA label, timeout
+  - `[trust]` - TLS verification mode, CA bundle path
+  - `[authentication]` - HTTP Basic, client cert, machine account
+  - `[certificate]` - Subject DN, SANs, key algorithm, extensions
+  - `[renewal]` - Threshold, check interval, retry settings
+  - `[storage]` - Windows cert store or file paths
+  - `[logging]` - Log level, file path, Event Log integration
+  - `[service]` - Windows Service configuration
+- [ ] Implement variable expansion (`${COMPUTERNAME}`, `${USERDNSDOMAIN}`, `${USERNAME}`)
+- [ ] Add config validation with helpful error messages
+- [ ] Create `examples/config/` directory with sample configs:
+  - `machine-cert.toml` - Basic machine certificate enrollment
+  - `workstation.toml` - Domain workstation with auto-renewal
+  - `server.toml` - Server certificate with multiple SANs
+  - `kiosk.toml` - Minimal config for kiosk/embedded devices
+- [ ] Add JSON schema for IDE autocompletion support
+- [ ] Document config format in `docs/windows-enrollment.md`
+
+#### 11.1.2 Config File Locations
+
+- [ ] Define Windows-standard config search paths:
+  - `%PROGRAMDATA%\EST\config.toml` (system-wide)
+  - `%LOCALAPPDATA%\EST\config.toml` (per-user)
+  - Command-line specified path
+- [ ] Implement config file discovery with precedence rules
+- [ ] Support config includes for shared settings
+- [ ] Add environment variable overrides for all settings
+
+### 11.2 Windows Platform Integration
+
+#### 11.2.1 Windows Certificate Store Integration (`src/windows/certstore.rs`)
+
+- [ ] Add `windows` feature flag to `Cargo.toml`
+- [ ] Add Windows API dependencies (`windows-sys` or `windows` crate)
+- [ ] Implement certificate store operations:
+  - `open_store(name)` - Open LocalMachine\My, CurrentUser\My, etc.
+  - `import_certificate(cert, key)` - Import cert with private key
+  - `find_certificate(thumbprint)` - Locate cert by SHA-1 thumbprint
+  - `find_certificate_by_subject(cn)` - Locate by Common Name
+  - `list_certificates()` - Enumerate all certificates
+  - `delete_certificate(thumbprint)` - Remove certificate
+  - `export_certificate(thumbprint)` - Export to PEM/PFX
+- [ ] Handle certificate store permissions (LocalMachine requires admin)
+- [ ] Implement private key association with CNG
+- [ ] Support certificate chain installation
+- [ ] Add certificate property setting (friendly name, EKU)
+- [ ] Create unit tests with mock certificate store
+
+#### 11.2.2 Windows CNG Key Provider (`src/windows/cng.rs`)
+
+- [ ] Implement `KeyProvider` trait for Windows CNG
+- [ ] Support key algorithms:
+  - ECDSA P-256, P-384 (CNG ECDSA)
+  - RSA 2048, 3072, 4096 (CNG RSA)
+- [ ] Implement key storage providers:
+  - Microsoft Software Key Storage Provider (default)
+  - Microsoft Smart Card Key Storage Provider
+  - Microsoft Platform Crypto Provider (TPM)
+- [ ] Key operations:
+  - `generate_key_pair()` - Generate in specified provider
+  - `sign()` - Sign using CNG NCryptSignHash
+  - `public_key()` - Export public key blob
+  - `delete_key()` - Remove from storage
+- [ ] Support key non-exportability flags
+- [ ] Handle key usage restrictions (signing only, encryption only)
+
+#### 11.2.3 TPM Integration (`src/windows/tpm.rs`)
+
+- [ ] Detect TPM 2.0 availability
+- [ ] Implement TPM key generation via Platform Crypto Provider
+- [ ] Support TPM key attestation (if required by EST server)
+- [ ] Handle TPM authorization (PIN, password)
+- [ ] Implement TPM-backed CSR signing
+- [ ] Add TPM health checks and diagnostics
+- [ ] Document TPM requirements and configuration
+
+#### 11.2.4 Machine Identity (`src/windows/identity.rs`)
+
+- [ ] Retrieve machine account name (`COMPUTERNAME$`)
+- [ ] Retrieve domain information (`USERDNSDOMAIN`, `USERDOMAIN`)
+- [ ] Generate machine-specific credentials for HTTP Basic auth:
+  - Option 1: Machine account name as username
+  - Option 2: Derived credential from machine certificate
+  - Option 3: Pre-shared key from config
+- [ ] Detect domain join status
+- [ ] Retrieve machine SID for identification
+- [ ] Support workgroup machines (non-domain joined)
+
+### 11.3 Windows Service Implementation
+
+#### 11.3.1 Service Framework (`src/windows/service.rs`)
+
+- [ ] Add `windows-service` crate dependency
+- [ ] Implement Windows Service control handler:
+  - `SERVICE_CONTROL_STOP` - Graceful shutdown
+  - `SERVICE_CONTROL_PAUSE` - Pause renewal checks
+  - `SERVICE_CONTROL_CONTINUE` - Resume operations
+  - `SERVICE_CONTROL_INTERROGATE` - Report status
+  - `SERVICE_CONTROL_PRESHUTDOWN` - Save state before shutdown
+- [ ] Implement service state machine:
+  - `SERVICE_START_PENDING` → `SERVICE_RUNNING`
+  - `SERVICE_STOP_PENDING` → `SERVICE_STOPPED`
+  - `SERVICE_PAUSE_PENDING` → `SERVICE_PAUSED`
+- [ ] Handle service recovery options (restart on failure)
+- [ ] Support delayed auto-start for boot performance
+- [ ] Implement service dependencies (network ready, time sync)
+
+#### 11.3.2 Service Installer (`src/bin/est-service-install.rs`)
+
+- [ ] Create service installation binary
+- [ ] Implement `sc.exe` equivalent functionality:
+  - `install` - Create service with specified account
+  - `uninstall` - Remove service
+  - `start` / `stop` - Control service
+  - `status` - Query service status
+- [ ] Configure service account options:
+  - LocalSystem (default, full access)
+  - NetworkService (network access, limited local)
+  - Custom service account (domain or local)
+- [ ] Set service description and display name
+- [ ] Configure failure recovery actions
+- [ ] Add PowerShell installation script for enterprise deployment
+
+#### 11.3.3 Service Main Loop (`src/bin/est-autoenroll-service.rs`)
+
+- [ ] Create main service binary
+- [ ] Implement enrollment state machine:
+  1. Load configuration
+  2. Check for existing valid certificate
+  3. If missing/expired: perform initial enrollment
+  4. Start renewal scheduler
+  5. Handle service control events
+  6. Graceful shutdown with state save
+- [ ] Implement health check endpoint (optional HTTP)
+- [ ] Add watchdog timer for hung operations
+- [ ] Support multiple certificate profiles (one service, many certs)
+
+### 11.4 Logging and Monitoring
+
+#### 11.4.1 Windows Event Log Integration (`src/windows/eventlog.rs`)
+
+- [ ] Register EST Auto-Enrollment event source
+- [ ] Define event IDs and categories:
+  - 1000-1099: Informational (enrollment started, completed)
+  - 2000-2099: Warnings (renewal approaching, retry needed)
+  - 3000-3099: Errors (enrollment failed, connection error)
+  - 4000-4099: Audit (certificate installed, removed)
+- [ ] Implement structured event data:
+  - Certificate thumbprint
+  - Subject CN
+  - Expiration date
+  - EST server URL
+  - Error details
+- [ ] Support Event Log forwarding (Windows Event Forwarding)
+- [ ] Create Event Log manifest (`.man` file) for custom views
+
+#### 11.4.2 File Logging
+
+- [ ] Implement rotating file logger
+- [ ] Configure log levels (debug, info, warn, error)
+- [ ] Add structured JSON logging option
+- [ ] Support log file size limits and rotation
+- [ ] Implement log file compression for old logs
+
+#### 11.4.3 Monitoring Integration
+
+- [ ] Expose Prometheus metrics endpoint (optional)
+- [ ] Add Windows Performance Counters:
+  - Certificates enrolled (counter)
+  - Certificates renewed (counter)
+  - Enrollment failures (counter)
+  - Days until expiration (gauge)
+  - Last check time (gauge)
+- [ ] Support SNMP traps for enterprise monitoring
+- [ ] Add health check file for monitoring systems
+
+### 11.5 Enrollment Workflows
+
+#### 11.5.1 Initial Enrollment Flow
+
+- [ ] Implement bootstrap enrollment sequence:
+  1. Load config and validate
+  2. Fetch CA certificates (with TOFU if configured)
+  3. Verify CA fingerprint (out-of-band verification)
+  4. Generate key pair (CNG/TPM/software)
+  5. Build CSR with configured subject/SANs
+  6. Authenticate (HTTP Basic or bootstrap cert)
+  7. Submit enrollment request
+  8. Handle pending (202) with retry loop
+  9. Install issued certificate to cert store
+  10. Associate private key with certificate
+  11. Log success to Event Log
+- [ ] Support enrollment approval workflows
+- [ ] Handle EST server errors gracefully
+- [ ] Implement enrollment timeout and cancellation
+
+#### 11.5.2 Re-enrollment Flow
+
+- [ ] Implement certificate renewal sequence:
+  1. Load existing certificate from store
+  2. Check expiration against threshold
+  3. Generate new key pair (or reuse if allowed)
+  4. Build CSR with same subject
+  5. Authenticate with existing certificate (TLS client auth)
+  6. Submit re-enrollment request
+  7. Install new certificate
+  8. Optionally archive old certificate
+  9. Clean up old private key (if new key generated)
+- [ ] Support key rollover vs key reuse policies
+- [ ] Handle renewal failures with backoff
+- [ ] Implement renewal notification callbacks
+
+#### 11.5.3 Recovery Scenarios
+
+- [ ] Handle certificate store corruption
+- [ ] Recover from missing private key
+- [ ] Re-bootstrap after CA certificate change
+- [ ] Handle time sync issues (expired cert due to clock skew)
+- [ ] Implement manual re-enrollment trigger
+- [ ] Support certificate revocation and re-enrollment
+
+### 11.6 Security Considerations
+
+#### 11.6.1 Credential Protection
+
+- [ ] Secure storage for HTTP Basic credentials:
+  - Windows Credential Manager integration
+  - DPAPI encryption for config file secrets
+  - Environment variable injection (for containers)
+- [ ] Never log credentials or private keys
+- [ ] Implement credential rotation support
+- [ ] Support certificate-based authentication only (no passwords)
+
+#### 11.6.2 Key Protection
+
+- [ ] Default to non-exportable private keys
+- [ ] Support TPM-backed keys for high security
+- [ ] Implement key usage auditing
+- [ ] Handle key compromise scenarios (revoke + re-enroll)
+- [ ] Document key protection best practices
+
+#### 11.6.3 Network Security
+
+- [ ] Enforce TLS 1.2+ for all connections
+- [ ] Support certificate pinning for EST server
+- [ ] Handle proxy configurations (system proxy, explicit proxy)
+- [ ] Support air-gapped networks (offline CA cert distribution)
+- [ ] Implement network retry with exponential backoff
+
+### 11.7 Command-Line Interface
+
+#### 11.7.1 CLI Tool (`src/bin/est-enroll.rs`)
+
+- [ ] Create command-line enrollment tool
+- [ ] Implement subcommands:
+  - `enroll` - Perform one-time enrollment
+  - `renew` - Force certificate renewal
+  - `status` - Show current certificate status
+  - `check` - Verify EST server connectivity
+  - `export` - Export certificate to file
+  - `revoke` - Request certificate revocation
+  - `config validate` - Validate configuration file
+  - `config show` - Display effective configuration
+- [ ] Support common flags:
+  - `--config <path>` - Specify config file
+  - `--server <url>` - Override EST server
+  - `--verbose` / `--quiet` - Control output
+  - `--dry-run` - Show what would happen
+  - `--force` - Override safety checks
+- [ ] Implement interactive mode for initial setup
+- [ ] Add PowerShell completion script
+
+#### 11.7.2 Diagnostic Commands
+
+- [ ] `est-enroll diagnose` - Run connectivity diagnostics:
+  - DNS resolution
+  - TCP connectivity
+  - TLS handshake
+  - EST server capabilities
+  - Authentication test
+- [ ] `est-enroll test-csr` - Generate and display CSR without enrolling
+- [ ] `est-enroll ca-info` - Display CA certificate information
+- [ ] `est-enroll cert-info` - Display enrolled certificate details
+
+### 11.8 Testing and Validation
+
+#### 11.8.1 Unit Tests
+
+- [ ] Test config file parsing (valid and invalid configs)
+- [ ] Test variable expansion
+- [ ] Test Windows cert store operations (mocked)
+- [ ] Test CNG key provider (mocked)
+- [ ] Test service state machine
+- [ ] Test enrollment workflows (mocked EST server)
+
+#### 11.8.2 Integration Tests
+
+- [ ] Test against EST test server (e.g., est.testrfc7030.com)
+- [ ] Test Windows cert store integration (requires Windows)
+- [ ] Test TPM operations (requires TPM hardware/simulator)
+- [ ] Test service installation and lifecycle
+- [ ] Test renewal scenarios with mock certificates
+
+#### 11.8.3 Compatibility Testing
+
+- [ ] Test on Windows 10 (21H2, 22H2)
+- [ ] Test on Windows 11 (22H2, 23H2)
+- [ ] Test on Windows Server 2019
+- [ ] Test on Windows Server 2022
+- [ ] Test with various EST servers:
+  - Cisco EST
+  - EJBCA
+  - Dogtag/FreeIPA
+  - Microsoft NDES (via EST adapter)
+- [ ] Test with hardware HSMs (YubiHSM, SafeNet)
+
+### 11.9 Documentation
+
+#### 11.9.1 User Documentation
+
+- [ ] `docs/windows-enrollment.md` - Complete Windows setup guide
+- [ ] `docs/config-reference.md` - Configuration file reference
+- [ ] `docs/migration-from-adcs.md` - ADCS migration guide
+- [ ] `docs/troubleshooting.md` - Common issues and solutions
+
+#### 11.9.2 Enterprise Deployment
+
+- [ ] Group Policy deployment guide
+- [ ] SCCM/Intune deployment templates
+- [ ] Ansible/Puppet/Chef deployment playbooks
+- [ ] Container deployment guide (Windows containers)
+
+#### 11.9.3 Security Documentation
+
+- [ ] Security hardening guide
+- [ ] Audit logging configuration
+- [ ] Compliance mapping (NIST, CMMC, FedRAMP)
+- [ ] Incident response procedures
+
+### 11.10 Sample Configuration Files
+
+#### Machine Certificate (Basic)
+
+```toml
+# /ProgramData/EST/config.toml
+# Basic machine certificate enrollment
+
+[server]
+url = "https://est.example.com"
+timeout_seconds = 60
+
+[trust]
+mode = "explicit"
+ca_bundle_path = "C:\\ProgramData\\EST\\ca-bundle.pem"
+
+[authentication]
+method = "http_basic"
+username = "${COMPUTERNAME}"
+password_source = "credential_manager"  # or "env:EST_PASSWORD"
+
+[certificate]
+common_name = "${COMPUTERNAME}.${USERDNSDOMAIN}"
+organization = "Example Corp"
+organizational_unit = "Workstations"
+
+[certificate.san]
+dns = ["${COMPUTERNAME}.${USERDNSDOMAIN}", "${COMPUTERNAME}"]
+
+[certificate.key]
+algorithm = "ecdsa-p256"
+provider = "cng"
+non_exportable = true
+
+[certificate.extensions]
+key_usage = ["digital_signature", "key_encipherment"]
+extended_key_usage = ["client_auth"]
+
+[renewal]
+enabled = true
+threshold_days = 30
+check_interval_hours = 6
+
+[storage]
+windows_store = "LocalMachine\\My"
+
+[logging]
+level = "info"
+windows_event_log = true
+
+[service]
+start_type = "automatic"
+```
+
+#### Server Certificate (Advanced)
+
+```toml
+# Server certificate with multiple SANs and TPM protection
+
+[server]
+url = "https://est.example.com"
+ca_label = "servers"
+
+[trust]
+mode = "explicit"
+ca_bundle_path = "C:\\ProgramData\\EST\\ca-bundle.pem"
+
+[authentication]
+method = "client_cert"
+cert_store = "LocalMachine\\My"
+cert_thumbprint = "auto"  # Use existing EST-enrolled cert
+
+[certificate]
+common_name = "webserver.example.com"
+organization = "Example Corp"
+organizational_unit = "Web Services"
+country = "US"
+state = "Virginia"
+locality = "Arlington"
+
+[certificate.san]
+dns = [
+    "webserver.example.com",
+    "www.example.com",
+    "api.example.com",
+    "*.internal.example.com"
+]
+ip = ["10.0.1.100", "192.168.1.100"]
+
+[certificate.key]
+algorithm = "rsa-2048"
+provider = "tpm"
+attestation = true
+
+[certificate.extensions]
+key_usage = ["digital_signature", "key_encipherment"]
+extended_key_usage = ["server_auth", "client_auth"]
+
+[renewal]
+enabled = true
+threshold_days = 45
+check_interval_hours = 12
+max_retries = 10
+
+[storage]
+windows_store = "LocalMachine\\My"
+friendly_name = "Web Server Certificate"
+
+[logging]
+level = "debug"
+path = "C:\\ProgramData\\EST\\logs\\est-server.log"
+windows_event_log = true
+```
+
+---
+
 ### Possible Future Enhancements
 
 These features are outside the core EST protocol scope but could be considered for future development:
@@ -553,12 +1021,23 @@ These features are outside the core EST protocol scope but could be considered f
 - **Documentation**: 7 comprehensive documentation files
 - **Examples**: 3 working examples
 - **Code quality**: All clippy warnings fixed, formatted code
-- **Tests**: 39 unit tests covering core functionality
+- **Tests**: 183 tests (88 unit + 80 integration + 15 doc)
+- **Integration Testing**: 55.82% code coverage with wiremock-based tests
+- **Advanced Features**: HSM, PKCS#11, renewal, metrics, revocation (core implementations)
 
 ### 🔄 In Progress
 
-- **Integration tests**: Need mock server tests for HTTP operations
-- **Code coverage**: 26.21% → target 70-80%
+- **Phase 10.3**: Platform support expansion (WASM, no_std)
+
+### 📋 Planned
+
+- **Phase 11**: Windows Auto-Enrollment (ADCS Replacement)
+  - TOML configuration file system
+  - Windows certificate store integration
+  - CNG/TPM key providers
+  - Windows Service implementation
+  - Event Log integration
+  - CLI tools for enrollment management
 
 ### 📊 Metrics
 
