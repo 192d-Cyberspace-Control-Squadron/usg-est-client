@@ -1030,7 +1030,13 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 
 #### 11.8.2 Integration Tests
 
-- [ ] Test against EST test server (e.g., est.testrfc7030.com)
+- ✅ Test against EST test server (testrfc7030.com) - 10 live tests in `tests/live_est_server_test.rs`
+  - `/cacerts` endpoint tests (with and without auth)
+  - `/csrattrs` endpoint tests
+  - `/simpleenroll` endpoint tests (requires csr-gen feature)
+  - TLS configuration tests (explicit trust anchor, WebPKI rejection)
+  - Full enrollment workflow test
+  - Tests gracefully skip when server is unreachable
 - [ ] Test Windows cert store integration (requires Windows)
 - [ ] Test TPM operations (requires TPM hardware/simulator)
 - [ ] Test service installation and lifecycle
@@ -1268,6 +1274,7 @@ These features are outside the core EST protocol scope but could be considered f
 - **Lines of Code**: ~885 lines (library core)
 - **Test Coverage**: 55.82% (as of Phase 10)
 - **Unit Tests**: 219 passing (80+ new in Phase 11.8)
+- **Live Integration Tests**: 10 (testrfc7030.com)
 - **Documentation**: 7 files, ~3,500 lines
 - **Examples**: 3 complete examples
 - **Dependencies**: 19 production, 2 dev
