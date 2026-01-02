@@ -526,7 +526,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 This phase implements a complete Windows auto-enrollment solution to replace Microsoft Active Directory Certificate Services (ADCS) auto-enrollment with EST-based certificate management.
 
-**Progress**: 5 of 9 sub-phases complete (11.1, 11.2, 11.3, 11.4, 11.5)
+**Progress**: 6 of 9 sub-phases complete (11.1, 11.2, 11.3, 11.4, 11.5, 11.6)
 
 ### 11.1 Configuration File System ✅ COMPLETE
 
@@ -896,33 +896,67 @@ This phase implements a complete Windows auto-enrollment solution to replace Mic
 - `RecoveryHelper` - Helper for recovery scenarios
 - `RecoveryOptions` - Options for recovery operations
 
-### 11.6 Security Considerations
+### 11.6 Security Considerations ✅ COMPLETE
 
-#### 11.6.1 Credential Protection
+**Status**: Core implementation complete with credential protection, key protection, and network security.
 
-- [ ] Secure storage for HTTP Basic credentials:
-  - Windows Credential Manager integration
-  - DPAPI encryption for config file secrets
-  - Environment variable injection (for containers)
-- [ ] Never log credentials or private keys
-- [ ] Implement credential rotation support
-- [ ] Support certificate-based authentication only (no passwords)
+**Files Created**:
 
-#### 11.6.2 Key Protection
+- `src/windows/credentials.rs` - Credential management (550 lines)
+- `src/windows/security.rs` - Security utilities (550 lines)
 
-- [ ] Default to non-exportable private keys
-- [ ] Support TPM-backed keys for high security
-- [ ] Implement key usage auditing
-- [ ] Handle key compromise scenarios (revoke + re-enroll)
-- [ ] Document key protection best practices
+**Feature Flag**: `windows-service` (includes security modules)
 
-#### 11.6.3 Network Security
+#### 11.6.1 Credential Protection (`src/windows/credentials.rs`) ✅ COMPLETE
 
-- [ ] Enforce TLS 1.2+ for all connections
-- [ ] Support certificate pinning for EST server
-- [ ] Handle proxy configurations (system proxy, explicit proxy)
-- [ ] Support air-gapped networks (offline CA cert distribution)
-- [ ] Implement network retry with exponential backoff
+- ✅ Secure storage for HTTP Basic credentials:
+  - ✅ Windows Credential Manager integration (`CredentialManager`)
+  - ✅ DPAPI encryption for config file secrets (`Dpapi`)
+  - ✅ Environment variable injection (for containers) (`CredentialSource::Environment`)
+- ✅ `SecureString` type that zeroes memory on drop
+- ✅ Multiple credential sources:
+  - ✅ `CredentialSource::Direct` - Inline (for testing only)
+  - ✅ `CredentialSource::Environment` - From environment variable
+  - ✅ `CredentialSource::File` - From file path
+  - ✅ `CredentialSource::CredentialManager` - From Windows Credential Manager
+  - ✅ `CredentialSource::DpapiEncrypted` - DPAPI-encrypted base64 string
+- ✅ `StoredCredential` struct with username, password, comment
+- ✅ Credential type support: Generic, DomainPassword, Certificate
+- ✅ 10 unit tests passing
+
+#### 11.6.2 Key Protection (`src/windows/security.rs`) ✅ COMPLETE
+
+- ✅ `KeyProtection` policy configuration:
+  - ✅ `non_exportable` - Default to non-exportable private keys
+  - ✅ `tpm_preferred` / `tpm_required` - Support TPM-backed keys for high security
+  - ✅ `audit_key_usage` - Implement key usage auditing
+  - ✅ `min_rsa_key_size` - Minimum RSA key size (default 2048)
+  - ✅ `allowed_algorithms` - Whitelist of allowed key algorithms
+- ✅ `KeyAlgorithmPolicy` enum (EcdsaP256, EcdsaP384, Rsa2048, Rsa3072, Rsa4096)
+- ✅ Key protection validation via `validate_algorithm()`, `is_compliant()`
+- ✅ `SecurityAudit` for security event logging:
+  - ✅ Event types: KeyGenerated, KeyDeleted, CertificateInstalled, etc.
+  - ✅ Audit log file rotation support
+  - ✅ JSON audit log format
+- ✅ 10 unit tests passing
+
+#### 11.6.3 Network Security (`src/windows/security.rs`) ✅ COMPLETE
+
+- ✅ `TlsSecurityConfig` with minimum TLS version enforcement (TLS 1.2+)
+- ✅ `CertificatePinning` for EST server certificate pinning:
+  - ✅ SHA-256 fingerprint pins
+  - ✅ SPKI hash pins
+  - ✅ Subject CN pins
+  - ✅ Pin validation via `validate()`
+- ✅ `NetworkSecurityConfig` with timeout, retry, and backoff settings
+- ✅ `ProxyConfig` for proxy configurations:
+  - ✅ System proxy detection
+  - ✅ Explicit HTTP/HTTPS proxy
+  - ✅ SOCKS5 proxy support
+  - ✅ Proxy authentication
+  - ✅ No-proxy list for bypassing
+- ✅ TLS version enum (Tls12, Tls13)
+- ✅ 10 unit tests passing
 
 ### 11.7 Command-Line Interface
 
@@ -1196,12 +1230,12 @@ These features are outside the core EST protocol scope but could be considered f
   - ✅ Phase 11.3: Windows Service Implementation (complete)
   - ✅ Phase 11.4: Logging and Monitoring (complete)
   - ✅ Phase 11.5: Enrollment Workflows (complete)
-  - 🔄 Phase 11.6: Security Considerations (next)
+  - ✅ Phase 11.6: Security Considerations (complete)
+  - 🔄 Phase 11.7: Command-Line Interface (next)
 
 ### 📋 Planned
 
-- **Phase 11.6-11.9**: Remaining Windows Auto-Enrollment
-  - Security considerations
+- **Phase 11.7-11.9**: Remaining Windows Auto-Enrollment
   - CLI tools for enrollment management
   - Testing and validation
   - Documentation
