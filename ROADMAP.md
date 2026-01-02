@@ -211,7 +211,6 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Unit tests for configuration
 - ✅ Unit tests for CSR building
 - ✅ 39 unit tests total
-- [ ] Integration tests with wiremock ⚠️ TODO
 
 ---
 
@@ -282,7 +281,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Create `tests/integration/operations/reenroll_test.rs`
   - ✅ Test successful re-enrollment
   - ✅ Test missing client certificate
-  - ⚠️  Test expired certificate handling (placeholder)
+  - ✅ Test expired certificate handling
 - ✅ Create `tests/integration/operations/csrattrs_test.rs`
   - ✅ Test successful CSR attributes retrieval
   - ✅ Test HTTP 404 (not supported)
@@ -290,7 +289,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Create `tests/integration/operations/serverkeygen_test.rs`
   - ✅ Test successful server keygen
   - ✅ Test multipart response parsing
-  - ⚠️  Test encrypted vs unencrypted keys (placeholder)
+  - ✅ Test encrypted vs unencrypted keys
   - ✅ Test malformed multipart response
 - ✅ Create `tests/integration/operations/fullcmc_test.rs`
   - ⚠️  Test basic CMC request/response (placeholder)
