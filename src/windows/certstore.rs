@@ -63,16 +63,15 @@
 use crate::error::{EstError, Result};
 
 #[cfg(windows)]
+use windows::Win32::Foundation::{BOOL, GetLastError};
+#[cfg(windows)]
 use windows::Win32::Security::Cryptography::{
-    CertCloseStore, CertDeleteCertificateFromStore, CertEnumCertificatesInStore,
-    CertFindCertificateInStore, CertOpenStore, CertSetCertificateContextProperty,
     CERT_CONTEXT, CERT_FIND_HASH, CERT_FIND_SUBJECT_STR, CERT_FRIENDLY_NAME_PROP_ID,
     CERT_KEY_PROV_INFO_PROP_ID, CERT_STORE_ADD_REPLACE_EXISTING, CERT_STORE_PROV_SYSTEM_W,
     CERT_SYSTEM_STORE_CURRENT_USER, CERT_SYSTEM_STORE_LOCAL_MACHINE, CRYPT_KEY_PROV_INFO,
-    HCERTSTORE,
+    CertCloseStore, CertDeleteCertificateFromStore, CertEnumCertificatesInStore,
+    CertFindCertificateInStore, CertOpenStore, CertSetCertificateContextProperty, HCERTSTORE,
 };
-#[cfg(windows)]
-use windows::Win32::Foundation::{BOOL, GetLastError};
 #[cfg(windows)]
 use windows::core::PCWSTR;
 
@@ -99,7 +98,7 @@ impl CertStoreLocation {
             Self::LocalMachine => CERT_SYSTEM_STORE_LOCAL_MACHINE,
             Self::CurrentUser => CERT_SYSTEM_STORE_CURRENT_USER,
             Self::LocalMachineGroupPolicy => 0x00020000, // CERT_SYSTEM_STORE_LOCAL_MACHINE_GROUP_POLICY
-            Self::CurrentUserGroupPolicy => 0x00010000,  // CERT_SYSTEM_STORE_CURRENT_USER_GROUP_POLICY
+            Self::CurrentUserGroupPolicy => 0x00010000, // CERT_SYSTEM_STORE_CURRENT_USER_GROUP_POLICY
         }
     }
 
@@ -247,7 +246,9 @@ impl CertStore {
         #[cfg(not(windows))]
         {
             let _ = (location, name);
-            Err(EstError::platform("Windows certificate store operations require Windows OS"))
+            Err(EstError::platform(
+                "Windows certificate store operations require Windows OS",
+            ))
         }
     }
 
@@ -337,7 +338,9 @@ impl CertStore {
 
         #[cfg(not(windows))]
         {
-            Err(EstError::platform("Windows certificate store operations require Windows OS"))
+            Err(EstError::platform(
+                "Windows certificate store operations require Windows OS",
+            ))
         }
     }
 
@@ -404,7 +407,9 @@ impl CertStore {
         #[cfg(not(windows))]
         {
             let _ = thumbprint;
-            Err(EstError::platform("Windows certificate store operations require Windows OS"))
+            Err(EstError::platform(
+                "Windows certificate store operations require Windows OS",
+            ))
         }
     }
 
@@ -449,7 +454,9 @@ impl CertStore {
         #[cfg(not(windows))]
         {
             let _ = subject;
-            Err(EstError::platform("Windows certificate store operations require Windows OS"))
+            Err(EstError::platform(
+                "Windows certificate store operations require Windows OS",
+            ))
         }
     }
 
@@ -468,7 +475,11 @@ impl CertStore {
     ///
     /// This imports a certificate without a private key. To import with a private key,
     /// use `import_certificate_with_key` or `import_pfx`.
-    pub fn import_certificate(&self, cert_der: &[u8], friendly_name: Option<&str>) -> Result<String> {
+    pub fn import_certificate(
+        &self,
+        cert_der: &[u8],
+        friendly_name: Option<&str>,
+    ) -> Result<String> {
         #[cfg(windows)]
         {
             use windows::Win32::Security::Cryptography::{
@@ -501,7 +512,8 @@ impl CertStore {
             }
 
             // Extract thumbprint before freeing context
-            let thumbprint = self.extract_cert_info(context)
+            let thumbprint = self
+                .extract_cert_info(context)
                 .map(|c| c.thumbprint)
                 .unwrap_or_default();
 
@@ -513,7 +525,9 @@ impl CertStore {
         #[cfg(not(windows))]
         {
             let _ = (cert_der, friendly_name);
-            Err(EstError::platform("Windows certificate store operations require Windows OS"))
+            Err(EstError::platform(
+                "Windows certificate store operations require Windows OS",
+            ))
         }
     }
 
@@ -538,11 +552,11 @@ impl CertStore {
     ) -> Result<String> {
         #[cfg(windows)]
         {
+            use std::ffi::OsStr;
+            use std::os::windows::ffi::OsStrExt;
             use windows::Win32::Security::Cryptography::{
                 CertAddEncodedCertificateToStore, CertFreeCertificateContext,
             };
-            use std::ffi::OsStr;
-            use std::os::windows::ffi::OsStrExt;
 
             let mut context: *const CERT_CONTEXT = std::ptr::null();
 
@@ -604,11 +618,13 @@ impl CertStore {
 
             // Set friendly name if provided
             if let Some(name) = friendly_name {
-                let _ = self.set_certificate_property_string(context, CERT_FRIENDLY_NAME_PROP_ID, name);
+                let _ =
+                    self.set_certificate_property_string(context, CERT_FRIENDLY_NAME_PROP_ID, name);
             }
 
             // Extract thumbprint before freeing context
-            let thumbprint = self.extract_cert_info(context)
+            let thumbprint = self
+                .extract_cert_info(context)
                 .map(|c| c.thumbprint)
                 .unwrap_or_default();
 
@@ -620,7 +636,9 @@ impl CertStore {
         #[cfg(not(windows))]
         {
             let _ = (cert_der, key_container, provider_name, friendly_name);
-            Err(EstError::platform("Windows certificate store operations require Windows OS"))
+            Err(EstError::platform(
+                "Windows certificate store operations require Windows OS",
+            ))
         }
     }
 
@@ -685,7 +703,9 @@ impl CertStore {
         #[cfg(not(windows))]
         {
             let _ = thumbprint;
-            Err(EstError::platform("Windows certificate store operations require Windows OS"))
+            Err(EstError::platform(
+                "Windows certificate store operations require Windows OS",
+            ))
         }
     }
 
@@ -713,9 +733,9 @@ impl CertStore {
         prop_id: u32,
         value: &str,
     ) -> Result<()> {
-        use windows::Win32::Security::Cryptography::CRYPT_INTEGER_BLOB;
         use std::ffi::OsStr;
         use std::os::windows::ffi::OsStrExt;
+        use windows::Win32::Security::Cryptography::CRYPT_INTEGER_BLOB;
 
         let wide_value: Vec<u16> = OsStr::new(value)
             .encode_wide()
@@ -750,7 +770,7 @@ impl CertStore {
     /// Extract certificate information from a CERT_CONTEXT.
     #[cfg(windows)]
     fn extract_cert_info(&self, context: *const CERT_CONTEXT) -> Option<StoredCertificate> {
-        use sha2::{Sha1, Digest};
+        use sha2::{Digest, Sha1};
 
         if context.is_null() {
             return None;
@@ -760,10 +780,8 @@ impl CertStore {
             let ctx = &*context;
 
             // Get the DER bytes
-            let der_bytes = std::slice::from_raw_parts(
-                ctx.pbCertEncoded,
-                ctx.cbCertEncoded as usize,
-            ).to_vec();
+            let der_bytes =
+                std::slice::from_raw_parts(ctx.pbCertEncoded, ctx.cbCertEncoded as usize).to_vec();
 
             // Calculate SHA-1 thumbprint
             let mut hasher = sha2::Sha256::new();
@@ -771,7 +789,8 @@ impl CertStore {
             // For real thumbprint, we'd use the windows CRYPT_HASH_BLOB approach
             hasher.update(&der_bytes);
             let hash = hasher.finalize();
-            let thumbprint = hash.iter()
+            let thumbprint = hash
+                .iter()
                 .take(20) // SHA-1 is 20 bytes
                 .map(|b| format!("{:02X}", b))
                 .collect::<Vec<_>>()
@@ -881,7 +900,10 @@ mod tests {
 
     #[test]
     fn test_store_location_display() {
-        assert_eq!(format!("{}", CertStoreLocation::LocalMachine), "LocalMachine");
+        assert_eq!(
+            format!("{}", CertStoreLocation::LocalMachine),
+            "LocalMachine"
+        );
         assert_eq!(format!("{}", CertStoreLocation::CurrentUser), "CurrentUser");
     }
 

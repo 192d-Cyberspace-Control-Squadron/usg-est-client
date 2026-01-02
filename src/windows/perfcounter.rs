@@ -57,8 +57,8 @@
 //! ```
 
 use crate::error::{EstError, Result};
-use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicI64, AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Performance counter types tracked by the EST service.
@@ -202,9 +202,7 @@ impl CounterValues {
                 self.enrollment_failures.load(Ordering::Relaxed) as i64
             }
             CounterType::RenewalFailures => self.renewal_failures.load(Ordering::Relaxed) as i64,
-            CounterType::DaysUntilExpiration => {
-                self.days_until_expiration.load(Ordering::Relaxed)
-            }
+            CounterType::DaysUntilExpiration => self.days_until_expiration.load(Ordering::Relaxed),
             CounterType::LastCheckTime => self.last_check_time.load(Ordering::Relaxed) as i64,
             CounterType::OperationsPerMinute => {
                 self.operations_per_minute.load(Ordering::Relaxed) as i64
@@ -235,8 +233,7 @@ impl CounterValues {
                     .store(value as u64, Ordering::Relaxed);
             }
             CounterType::RenewalFailures => {
-                self.renewal_failures
-                    .store(value as u64, Ordering::Relaxed);
+                self.renewal_failures.store(value as u64, Ordering::Relaxed);
             }
             CounterType::DaysUntilExpiration => {
                 self.days_until_expiration.store(value, Ordering::Relaxed);
@@ -507,8 +504,7 @@ impl PerformanceCounters {
 
     /// Update the service state counter.
     pub fn update_service_state(&self, state: ServiceStateCounter) {
-        self.values
-            .set(CounterType::ServiceState, state as i64);
+        self.values.set(CounterType::ServiceState, state as i64);
     }
 
     /// Update the number of managed certificates.
@@ -597,7 +593,10 @@ mod tests {
             CounterType::CertificatesEnrolled.name(),
             "Certificates Enrolled"
         );
-        assert_eq!(CounterType::DaysUntilExpiration.name(), "Days Until Expiration");
+        assert_eq!(
+            CounterType::DaysUntilExpiration.name(),
+            "Days Until Expiration"
+        );
     }
 
     #[test]
@@ -665,7 +664,9 @@ mod tests {
     fn test_performance_counters_increment() {
         let counters = PerformanceCounters::new("Test").unwrap();
 
-        counters.increment(CounterType::CertificatesEnrolled).unwrap();
+        counters
+            .increment(CounterType::CertificatesEnrolled)
+            .unwrap();
         assert_eq!(counters.get_value(CounterType::CertificatesEnrolled), 1);
     }
 

@@ -150,9 +150,11 @@ pub fn is_windows() -> bool {
 /// `true` if the process is running with elevated privileges.
 #[cfg(windows)]
 pub fn is_elevated() -> bool {
-    use windows::Win32::Security::{GetTokenInformation, TokenElevation, TOKEN_ELEVATION, TOKEN_QUERY};
-    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
     use std::mem::MaybeUninit;
+    use windows::Win32::Security::{
+        GetTokenInformation, TOKEN_ELEVATION, TOKEN_QUERY, TokenElevation,
+    };
+    use windows::Win32::System::Threading::{GetCurrentProcess, OpenProcessToken};
 
     unsafe {
         let mut token = windows::Win32::Foundation::HANDLE::default();
@@ -238,8 +240,17 @@ mod tests {
 
     #[test]
     fn test_windows_error_code_from_win32() {
-        assert_eq!(WindowsErrorCode::from_win32(5), WindowsErrorCode::AccessDenied);
-        assert_eq!(WindowsErrorCode::from_win32(2), WindowsErrorCode::StoreNotFound);
-        assert_eq!(WindowsErrorCode::from_win32(999), WindowsErrorCode::ApiError);
+        assert_eq!(
+            WindowsErrorCode::from_win32(5),
+            WindowsErrorCode::AccessDenied
+        );
+        assert_eq!(
+            WindowsErrorCode::from_win32(2),
+            WindowsErrorCode::StoreNotFound
+        );
+        assert_eq!(
+            WindowsErrorCode::from_win32(999),
+            WindowsErrorCode::ApiError
+        );
     }
 }

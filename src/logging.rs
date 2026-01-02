@@ -521,8 +521,7 @@ mod tests {
 
     #[test]
     fn test_log_entry_format_text() {
-        let entry = LogEntry::new(LogLevel::Info, "Test message")
-            .with_field("key", "value");
+        let entry = LogEntry::new(LogLevel::Info, "Test message").with_field("key", "value");
 
         let text = entry.format_text(true, true);
         assert!(text.contains("[INFO]"));
@@ -532,8 +531,7 @@ mod tests {
 
     #[test]
     fn test_log_entry_format_json() {
-        let entry = LogEntry::new(LogLevel::Error, "Error occurred")
-            .with_field("code", "500");
+        let entry = LogEntry::new(LogLevel::Error, "Error occurred").with_field("code", "500");
 
         let json = entry.format_json();
         assert!(json.contains("\"level\":\"ERROR\""));
@@ -630,7 +628,9 @@ mod tests {
         multi.add(FileLogger::new(LogConfig::file(&log1)).unwrap());
         multi.add(FileLogger::new(LogConfig::file(&log2)).unwrap());
 
-        multi.log(&LogEntry::new(LogLevel::Info, "Multi test")).unwrap();
+        multi
+            .log(&LogEntry::new(LogLevel::Info, "Multi test"))
+            .unwrap();
 
         let contents1 = fs::read_to_string(&log1).unwrap();
         let contents2 = fs::read_to_string(&log2).unwrap();

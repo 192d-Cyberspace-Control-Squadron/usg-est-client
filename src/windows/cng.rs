@@ -74,14 +74,14 @@ use std::sync::Arc;
 
 #[cfg(windows)]
 use windows::Win32::Security::Cryptography::{
-    BCryptCloseAlgorithmProvider, BCryptCreateHash, BCryptDestroyHash, BCryptDestroyKey,
-    BCryptExportKey, BCryptFinishHash, BCryptGenerateKeyPair, BCryptHashData,
-    BCryptOpenAlgorithmProvider, BCryptSignHash, BCRYPT_ALG_HANDLE, BCRYPT_ECCPUBLIC_BLOB,
-    BCRYPT_ECDSA_P256_ALGORITHM, BCRYPT_ECDSA_P384_ALGORITHM, BCRYPT_KEY_HANDLE,
-    BCRYPT_RSAPUBLIC_BLOB, BCRYPT_RSA_ALGORITHM, BCRYPT_SHA256_ALGORITHM,
-    NCryptCreatePersistedKey, NCryptDeleteKey, NCryptExportKey, NCryptFinalizeKey,
-    NCryptFreeObject, NCryptGetProperty, NCryptOpenKey, NCryptOpenStorageProvider,
-    NCryptSetProperty, NCryptSignHash, NCRYPT_FLAGS, NCRYPT_KEY_HANDLE, NCRYPT_PROV_HANDLE,
+    BCRYPT_ALG_HANDLE, BCRYPT_ECCPUBLIC_BLOB, BCRYPT_ECDSA_P256_ALGORITHM,
+    BCRYPT_ECDSA_P384_ALGORITHM, BCRYPT_KEY_HANDLE, BCRYPT_RSA_ALGORITHM, BCRYPT_RSAPUBLIC_BLOB,
+    BCRYPT_SHA256_ALGORITHM, BCryptCloseAlgorithmProvider, BCryptCreateHash, BCryptDestroyHash,
+    BCryptDestroyKey, BCryptExportKey, BCryptFinishHash, BCryptGenerateKeyPair, BCryptHashData,
+    BCryptOpenAlgorithmProvider, BCryptSignHash, NCRYPT_FLAGS, NCRYPT_KEY_HANDLE,
+    NCRYPT_PROV_HANDLE, NCryptCreatePersistedKey, NCryptDeleteKey, NCryptExportKey,
+    NCryptFinalizeKey, NCryptFreeObject, NCryptGetProperty, NCryptOpenKey,
+    NCryptOpenStorageProvider, NCryptSetProperty, NCryptSignHash,
 };
 
 /// Well-known CNG key storage provider names.
@@ -229,11 +229,7 @@ impl CngKeyProvider {
         let mut handle = NCRYPT_PROV_HANDLE::default();
 
         let result = unsafe {
-            NCryptOpenStorageProvider(
-                &mut handle,
-                windows::core::PCWSTR(wide_name.as_ptr()),
-                0,
-            )
+            NCryptOpenStorageProvider(&mut handle, windows::core::PCWSTR(wide_name.as_ptr()), 0)
         };
 
         if result.is_err() {
@@ -448,7 +444,9 @@ impl KeyProvider for CngKeyProvider {
         {
             // Implementation would export the public key blob and convert to SPKI
             // For now, return a placeholder error
-            Err(EstError::platform("CNG public key export not yet implemented"))
+            Err(EstError::platform(
+                "CNG public key export not yet implemented",
+            ))
         }
 
         #[cfg(not(windows))]
@@ -583,9 +581,15 @@ mod tests {
 
     #[test]
     fn test_provider_names() {
-        assert_eq!(providers::SOFTWARE, "Microsoft Software Key Storage Provider");
+        assert_eq!(
+            providers::SOFTWARE,
+            "Microsoft Software Key Storage Provider"
+        );
         assert_eq!(providers::PLATFORM, "Microsoft Platform Crypto Provider");
-        assert_eq!(providers::SMART_CARD, "Microsoft Smart Card Key Storage Provider");
+        assert_eq!(
+            providers::SMART_CARD,
+            "Microsoft Smart Card Key Storage Provider"
+        );
     }
 
     #[test]
@@ -599,8 +603,14 @@ mod tests {
 
     #[test]
     fn test_algorithm_to_cng() {
-        assert_eq!(CngKeyProvider::algorithm_to_cng(KeyAlgorithm::EcdsaP256), "ECDSA_P256");
-        assert_eq!(CngKeyProvider::algorithm_to_cng(KeyAlgorithm::EcdsaP384), "ECDSA_P384");
+        assert_eq!(
+            CngKeyProvider::algorithm_to_cng(KeyAlgorithm::EcdsaP256),
+            "ECDSA_P256"
+        );
+        assert_eq!(
+            CngKeyProvider::algorithm_to_cng(KeyAlgorithm::EcdsaP384),
+            "ECDSA_P384"
+        );
         assert_eq!(
             CngKeyProvider::algorithm_to_cng(KeyAlgorithm::Rsa { bits: 2048 }),
             "RSA"
@@ -609,8 +619,14 @@ mod tests {
 
     #[test]
     fn test_rsa_key_size() {
-        assert_eq!(CngKeyProvider::rsa_key_size(KeyAlgorithm::Rsa { bits: 2048 }), 2048);
-        assert_eq!(CngKeyProvider::rsa_key_size(KeyAlgorithm::Rsa { bits: 4096 }), 4096);
+        assert_eq!(
+            CngKeyProvider::rsa_key_size(KeyAlgorithm::Rsa { bits: 2048 }),
+            2048
+        );
+        assert_eq!(
+            CngKeyProvider::rsa_key_size(KeyAlgorithm::Rsa { bits: 4096 }),
+            4096
+        );
         assert_eq!(CngKeyProvider::rsa_key_size(KeyAlgorithm::EcdsaP256), 0);
     }
 

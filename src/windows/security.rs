@@ -260,10 +260,7 @@ impl CertificatePinning {
             return Ok(()); // No pins configured, allow all
         }
 
-        let normalized = fingerprint
-            .to_lowercase()
-            .replace(':', "")
-            .replace(' ', "");
+        let normalized = fingerprint.to_lowercase().replace(':', "").replace(' ', "");
 
         if self.pins.contains(&normalized) {
             return Ok(());
@@ -637,7 +634,8 @@ impl ProxyConfig {
             .ok()
             .map(|url| {
                 let mut config = Self::new(url);
-                if let Ok(no_proxy) = std::env::var("NO_PROXY").or_else(|_| std::env::var("no_proxy"))
+                if let Ok(no_proxy) =
+                    std::env::var("NO_PROXY").or_else(|_| std::env::var("no_proxy"))
                 {
                     config.no_proxy = no_proxy.split(',').map(|s| s.trim().to_string()).collect();
                 }
@@ -670,12 +668,28 @@ mod tests {
     #[test]
     fn test_key_protection_validate_algorithm() {
         let policy = KeyProtection::default();
-        assert!(policy.validate_algorithm(KeyAlgorithmPolicy::EcdsaP256).is_ok());
-        assert!(policy.validate_algorithm(KeyAlgorithmPolicy::Rsa2048).is_ok());
+        assert!(
+            policy
+                .validate_algorithm(KeyAlgorithmPolicy::EcdsaP256)
+                .is_ok()
+        );
+        assert!(
+            policy
+                .validate_algorithm(KeyAlgorithmPolicy::Rsa2048)
+                .is_ok()
+        );
 
         let strict = KeyProtection::default().with_min_rsa_key_size(3072);
-        assert!(strict.validate_algorithm(KeyAlgorithmPolicy::Rsa2048).is_err());
-        assert!(strict.validate_algorithm(KeyAlgorithmPolicy::Rsa4096).is_ok());
+        assert!(
+            strict
+                .validate_algorithm(KeyAlgorithmPolicy::Rsa2048)
+                .is_err()
+        );
+        assert!(
+            strict
+                .validate_algorithm(KeyAlgorithmPolicy::Rsa4096)
+                .is_ok()
+        );
     }
 
     #[test]

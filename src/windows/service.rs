@@ -73,8 +73,8 @@
 //! ```
 
 use crate::error::{EstError, Result};
-use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
 
 #[cfg(windows)]
@@ -254,7 +254,10 @@ impl ServiceEventHandler {
     }
 
     /// Handle a service control event.
-    pub fn handle_control_event(&self, control_event: ServiceControl) -> ServiceControlHandlerResult {
+    pub fn handle_control_event(
+        &self,
+        control_event: ServiceControl,
+    ) -> ServiceControlHandlerResult {
         match control_event {
             ServiceControl::Stop => {
                 tracing::info!("Received STOP control event");
@@ -609,7 +612,7 @@ pub mod installer {
                 first_failure: RecoveryAction::Restart,
                 second_failure: RecoveryAction::Restart,
                 subsequent_failures: RecoveryAction::Restart,
-                reset_period: 86400, // 24 hours
+                reset_period: 86400,  // 24 hours
                 restart_delay: 60000, // 1 minute
             }
         }
@@ -659,11 +662,11 @@ pub mod installer {
             service_manager::{ServiceManager, ServiceManagerAccess},
         };
 
-        let manager = ServiceManager::local_computer(
-            None::<&str>,
-            ServiceManagerAccess::CREATE_SERVICE,
-        )
-        .map_err(|e| EstError::platform(format!("Failed to open service manager: {}", e)))?;
+        let manager =
+            ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CREATE_SERVICE)
+                .map_err(|e| {
+                    EstError::platform(format!("Failed to open service manager: {}", e))
+                })?;
 
         let start_type = match config.start_type {
             StartType::Automatic | StartType::AutomaticDelayed => {
@@ -709,11 +712,10 @@ pub mod installer {
             service_manager::{ServiceManager, ServiceManagerAccess},
         };
 
-        let manager = ServiceManager::local_computer(
-            None::<&str>,
-            ServiceManagerAccess::CONNECT,
-        )
-        .map_err(|e| EstError::platform(format!("Failed to open service manager: {}", e)))?;
+        let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
+            .map_err(|e| {
+            EstError::platform(format!("Failed to open service manager: {}", e))
+        })?;
 
         let service = manager
             .open_service(name, ServiceAccess::DELETE)
@@ -735,11 +737,10 @@ pub mod installer {
             service_manager::{ServiceManager, ServiceManagerAccess},
         };
 
-        let manager = ServiceManager::local_computer(
-            None::<&str>,
-            ServiceManagerAccess::CONNECT,
-        )
-        .map_err(|e| EstError::platform(format!("Failed to open service manager: {}", e)))?;
+        let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
+            .map_err(|e| {
+            EstError::platform(format!("Failed to open service manager: {}", e))
+        })?;
 
         let service = manager
             .open_service(name, ServiceAccess::START)
@@ -761,11 +762,10 @@ pub mod installer {
             service_manager::{ServiceManager, ServiceManagerAccess},
         };
 
-        let manager = ServiceManager::local_computer(
-            None::<&str>,
-            ServiceManagerAccess::CONNECT,
-        )
-        .map_err(|e| EstError::platform(format!("Failed to open service manager: {}", e)))?;
+        let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
+            .map_err(|e| {
+            EstError::platform(format!("Failed to open service manager: {}", e))
+        })?;
 
         let service = manager
             .open_service(name, ServiceAccess::STOP)
@@ -787,11 +787,10 @@ pub mod installer {
             service_manager::{ServiceManager, ServiceManagerAccess},
         };
 
-        let manager = ServiceManager::local_computer(
-            None::<&str>,
-            ServiceManagerAccess::CONNECT,
-        )
-        .map_err(|e| EstError::platform(format!("Failed to open service manager: {}", e)))?;
+        let manager = ServiceManager::local_computer(None::<&str>, ServiceManagerAccess::CONNECT)
+            .map_err(|e| {
+            EstError::platform(format!("Failed to open service manager: {}", e))
+        })?;
 
         let service = manager
             .open_service(name, ServiceAccess::QUERY_STATUS)
@@ -820,7 +819,9 @@ pub mod installer {
 
     #[cfg(not(windows))]
     pub fn uninstall_service(_name: &str) -> Result<()> {
-        Err(EstError::platform("Service uninstallation requires Windows"))
+        Err(EstError::platform(
+            "Service uninstallation requires Windows",
+        ))
     }
 
     #[cfg(not(windows))]
@@ -881,7 +882,11 @@ mod tests {
 
     #[test]
     fn test_service_account() {
-        assert!(installer::ServiceAccount::LocalSystem.account_name().is_none());
+        assert!(
+            installer::ServiceAccount::LocalSystem
+                .account_name()
+                .is_none()
+        );
         assert_eq!(
             installer::ServiceAccount::LocalService.account_name(),
             Some("NT AUTHORITY\\LocalService")
@@ -909,7 +914,10 @@ mod tests {
     #[test]
     fn test_recovery_config_default() {
         let config = installer::RecoveryConfig::default();
-        assert!(matches!(config.first_failure, installer::RecoveryAction::Restart));
+        assert!(matches!(
+            config.first_failure,
+            installer::RecoveryAction::Restart
+        ));
         assert_eq!(config.reset_period, 86400);
         assert_eq!(config.restart_delay, 60000);
     }

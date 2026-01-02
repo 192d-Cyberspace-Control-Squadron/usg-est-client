@@ -107,7 +107,11 @@ impl MachineIdentity {
             dns_hostname,
             fqdn,
             domain: if domain_joined { domain } else { None },
-            workgroup: if domain_joined { None } else { Self::get_workgroup().ok() },
+            workgroup: if domain_joined {
+                None
+            } else {
+                Self::get_workgroup().ok()
+            },
             machine_sid: Self::get_machine_sid().ok(),
             domain_joined,
         })
@@ -135,7 +139,9 @@ impl MachineIdentity {
 
     /// Get a computer name using GetComputerNameExW.
     #[cfg(windows)]
-    fn get_computer_name_ex(name_type: windows::Win32::System::SystemInformation::COMPUTER_NAME_FORMAT) -> Result<String> {
+    fn get_computer_name_ex(
+        name_type: windows::Win32::System::SystemInformation::COMPUTER_NAME_FORMAT,
+    ) -> Result<String> {
         let mut size = 0u32;
 
         // First call to get required buffer size
@@ -276,9 +282,7 @@ pub fn current_username() -> Result<String> {
         }
 
         let mut buffer = vec![0u16; size as usize];
-        let result = unsafe {
-            GetUserNameW(windows::core::PWSTR(buffer.as_mut_ptr()), &mut size)
-        };
+        let result = unsafe { GetUserNameW(windows::core::PWSTR(buffer.as_mut_ptr()), &mut size) };
 
         if result.is_err() {
             return Err(EstError::platform("Failed to get username"));

@@ -195,8 +195,8 @@ fn ctrlc_handler(state: Arc<usg_est_client::windows::service::ServiceState>) {
 #[cfg(all(windows, feature = "windows-service"))]
 mod enrollment {
     use usg_est_client::auto_enroll::config::AutoEnrollConfig;
-    use usg_est_client::windows::{CertStore, MachineIdentity};
     use usg_est_client::error::Result;
+    use usg_est_client::windows::{CertStore, MachineIdentity};
 
     /// Check if enrollment is needed.
     pub async fn needs_enrollment(config: &AutoEnrollConfig) -> Result<bool> {

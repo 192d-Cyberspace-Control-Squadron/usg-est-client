@@ -143,8 +143,8 @@ pub struct EnrollmentOptions {
 impl Default for EnrollmentOptions {
     fn default() -> Self {
         Self {
-            pending_timeout: 3600,         // 1 hour
-            pending_check_interval: 60,    // 1 minute
+            pending_timeout: 3600,      // 1 hour
+            pending_check_interval: 60, // 1 minute
             force: false,
             archive_old: true,
             new_key_on_renewal: true,
@@ -248,7 +248,10 @@ impl EnrollmentManager {
         }
 
         let status = self.status().await?;
-        Ok(matches!(status, EnrollmentStatus::NotEnrolled | EnrollmentStatus::Expired))
+        Ok(matches!(
+            status,
+            EnrollmentStatus::NotEnrolled | EnrollmentStatus::Expired
+        ))
     }
 
     /// Check if certificate renewal is needed.
@@ -311,7 +314,8 @@ impl EnrollmentManager {
             crate::EnrollmentResponse::Pending { retry_after } => {
                 tracing::info!("Enrollment pending, retry after {} seconds", retry_after);
                 // Implement pending loop
-                self.wait_for_pending(&client, &csr_der, retry_after).await?
+                self.wait_for_pending(&client, &csr_der, retry_after)
+                    .await?
             }
         };
 
@@ -365,13 +369,16 @@ impl EnrollmentManager {
         // Step 2: Find existing certificate
         let store = self.open_cert_store()?;
         let cn = self.get_common_name(&identity);
-        let existing_cert = store.find_by_subject(&cn)?
+        let existing_cert = store
+            .find_by_subject(&cn)?
             .ok_or_else(|| EstError::platform("No existing certificate found for renewal"))?;
 
         tracing::debug!("Found existing certificate: {}", existing_cert.thumbprint);
 
         // Step 3: Build EST client with existing cert for TLS auth
-        let est_config = self.build_est_config_for_renewal(&identity, &existing_cert).await?;
+        let est_config = self
+            .build_est_config_for_renewal(&identity, &existing_cert)
+            .await?;
         let client = crate::EstClient::new(est_config).await?;
 
         // Step 4: Generate new key pair (or reuse based on policy)
@@ -392,7 +399,8 @@ impl EnrollmentManager {
         let cert = match response {
             crate::EnrollmentResponse::Issued { certificate } => certificate,
             crate::EnrollmentResponse::Pending { retry_after } => {
-                self.wait_for_pending(&client, &csr_der, retry_after).await?
+                self.wait_for_pending(&client, &csr_der, retry_after)
+                    .await?
             }
         };
 
@@ -470,7 +478,10 @@ impl EnrollmentManager {
 
     #[cfg(windows)]
     fn open_cert_store(&self) -> Result<CertStore> {
-        let store_path = self.config.storage.windows_store
+        let store_path = self
+            .config
+            .storage
+            .windows_store
             .as_deref()
             .unwrap_or("LocalMachine\\My");
 
@@ -486,8 +497,7 @@ impl EnrollmentManager {
     async fn build_est_config(&self, identity: &MachineIdentity) -> Result<crate::EstClientConfig> {
         use crate::{EstClientConfig, HttpAuth, TrustAnchors};
 
-        let mut builder = EstClientConfig::builder()
-            .server_url(&self.config.server.url)?;
+        let mut builder = EstClientConfig::builder().server_url(&self.config.server.url)?;
 
         // Set CA label if configured
         if let Some(ref label) = self.config.server.ca_label {
@@ -501,8 +511,7 @@ impl EnrollmentManager {
             }
             TrustMode::Explicit => {
                 if let Some(ref path) = self.config.trust.ca_bundle_path {
-                    let ca_pem = std::fs::read_to_string(path)
-                        .map_err(|e| EstError::Io(e))?;
+                    let ca_pem = std::fs::read_to_string(path).map_err(|e| EstError::Io(e))?;
                     builder = builder.trust_anchors(TrustAnchors::Explicit(ca_pem));
                 }
             }
@@ -541,8 +550,9 @@ impl EnrollmentManager {
         match self.config.authentication.password_source.as_deref() {
             Some(source) if source.starts_with("env:") => {
                 let var_name = &source[4..];
-                std::env::var(var_name)
-                    .map_err(|_| EstError::platform(format!("Environment variable {} not set", var_name)))
+                std::env::var(var_name).map_err(|_| {
+                    EstError::platform(format!("Environment variable {} not set", var_name))
+                })
             }
             Some(source) if source.starts_with("file:") => {
                 let path = &source[5..];
@@ -552,11 +562,16 @@ impl EnrollmentManager {
             }
             Some("credential_manager") => {
                 // Would use Windows Credential Manager here
-                Err(EstError::platform("Credential Manager support not yet implemented"))
+                Err(EstError::platform(
+                    "Credential Manager support not yet implemented",
+                ))
             }
             _ => {
                 // Direct password (not recommended for production)
-                self.config.authentication.password.clone()
+                self.config
+                    .authentication
+                    .password
+                    .clone()
                     .ok_or_else(|| EstError::platform("No password configured"))
             }
         }
@@ -565,7 +580,7 @@ impl EnrollmentManager {
     #[cfg(windows)]
     async fn generate_key_pair(&self, _identity: &MachineIdentity) -> Result<(KeyHandle, Vec<u8>)> {
         use super::CngKeyProvider;
-        use crate::hsm::{KeyProvider, KeyAlgorithm};
+        use crate::hsm::{KeyAlgorithm, KeyProvider};
 
         let algorithm = match self.config.certificate.key.algorithm {
             ConfigKeyAlgorithm::EcdsaP256 => KeyAlgorithm::EcdsaP256,
@@ -576,20 +591,25 @@ impl EnrollmentManager {
         };
 
         let provider = CngKeyProvider::new()?;
-        let handle = provider.generate_key_pair(algorithm, Some("EST-Enrollment")).await?;
+        let handle = provider
+            .generate_key_pair(algorithm, Some("EST-Enrollment"))
+            .await?;
         let public_key = provider.public_key(&handle).await?;
 
         Ok((KeyHandle(handle.id().to_string()), public_key))
     }
 
     #[cfg(windows)]
-    async fn build_csr(&self, identity: &MachineIdentity, _public_key_der: &[u8]) -> Result<Vec<u8>> {
+    async fn build_csr(
+        &self,
+        identity: &MachineIdentity,
+        _public_key_der: &[u8],
+    ) -> Result<Vec<u8>> {
         #[cfg(feature = "csr-gen")]
         {
             use crate::csr::CsrBuilder;
 
-            let mut builder = CsrBuilder::new()
-                .common_name(&self.config.certificate.common_name);
+            let mut builder = CsrBuilder::new().common_name(&self.config.certificate.common_name);
 
             if let Some(ref org) = self.config.certificate.organization {
                 builder = builder.organization(org);
@@ -626,7 +646,9 @@ impl EnrollmentManager {
 
         #[cfg(not(feature = "csr-gen"))]
         {
-            Err(EstError::platform("CSR generation requires csr-gen feature"))
+            Err(EstError::platform(
+                "CSR generation requires csr-gen feature",
+            ))
         }
     }
 
@@ -653,7 +675,9 @@ impl EnrollmentManager {
                 crate::EnrollmentResponse::Issued { certificate } => {
                     return Ok(certificate);
                 }
-                crate::EnrollmentResponse::Pending { retry_after: new_retry } => {
+                crate::EnrollmentResponse::Pending {
+                    retry_after: new_retry,
+                } => {
                     retry_after = new_retry;
                     tracing::info!("Still pending, retry after {} seconds", retry_after);
                 }
@@ -670,8 +694,7 @@ impl EnrollmentManager {
         use der::Encode;
 
         let store = self.open_cert_store()?;
-        let cert_der = cert.to_der()
-            .map_err(|e| EstError::Der(e))?;
+        let cert_der = cert.to_der().map_err(|e| EstError::Der(e))?;
 
         // Import certificate (key association would happen here in production)
         store.import_certificate(&cert_der)
@@ -776,7 +799,11 @@ impl RecoveryHelper {
     async fn delete_existing_certificate(&self) -> Result<()> {
         let identity = MachineIdentity::current()?;
         let store = CertStore::open_path(
-            self.config.storage.windows_store.as_deref().unwrap_or("LocalMachine\\My")
+            self.config
+                .storage
+                .windows_store
+                .as_deref()
+                .unwrap_or("LocalMachine\\My"),
         )?;
 
         let cn = &self.config.certificate.common_name;
@@ -803,10 +830,22 @@ mod tests {
 
     #[test]
     fn test_enrollment_status_description() {
-        assert_eq!(EnrollmentStatus::NotEnrolled.description(), "No certificate enrolled");
-        assert_eq!(EnrollmentStatus::Enrolled.description(), "Certificate is valid");
-        assert_eq!(EnrollmentStatus::RenewalNeeded.description(), "Certificate renewal needed");
-        assert_eq!(EnrollmentStatus::Expired.description(), "Certificate has expired");
+        assert_eq!(
+            EnrollmentStatus::NotEnrolled.description(),
+            "No certificate enrolled"
+        );
+        assert_eq!(
+            EnrollmentStatus::Enrolled.description(),
+            "Certificate is valid"
+        );
+        assert_eq!(
+            EnrollmentStatus::RenewalNeeded.description(),
+            "Certificate renewal needed"
+        );
+        assert_eq!(
+            EnrollmentStatus::Expired.description(),
+            "Certificate has expired"
+        );
     }
 
     #[test]

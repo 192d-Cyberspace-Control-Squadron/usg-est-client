@@ -165,10 +165,10 @@ impl EventType {
     #[cfg(windows)]
     pub fn to_windows_type(self) -> u16 {
         match self {
-            Self::Information => 4,  // EVENTLOG_INFORMATION_TYPE
-            Self::Warning => 2,      // EVENTLOG_WARNING_TYPE
-            Self::Error => 1,        // EVENTLOG_ERROR_TYPE
-            Self::AuditSuccess => 8, // EVENTLOG_AUDIT_SUCCESS
+            Self::Information => 4,   // EVENTLOG_INFORMATION_TYPE
+            Self::Warning => 2,       // EVENTLOG_WARNING_TYPE
+            Self::Error => 1,         // EVENTLOG_ERROR_TYPE
+            Self::AuditSuccess => 8,  // EVENTLOG_AUDIT_SUCCESS
             Self::AuditFailure => 16, // EVENTLOG_AUDIT_FAILURE
         }
     }
@@ -346,9 +346,9 @@ impl EventLog {
                     event_type.to_windows_type(),
                     0, // Category
                     event_id,
-                    None,          // User SID
+                    None, // User SID
                     Some(&strings),
-                    None,          // Raw data
+                    None, // Raw data
                 )
             };
 
@@ -407,7 +407,12 @@ impl EventLog {
     }
 
     /// Log a warning event.
-    pub fn log_warning(&self, event_id: u32, message: &str, data: Option<&EventData>) -> Result<()> {
+    pub fn log_warning(
+        &self,
+        event_id: u32,
+        message: &str,
+        data: Option<&EventData>,
+    ) -> Result<()> {
         self.log_event(event_id, EventType::Warning, message, data)
     }
 
@@ -440,12 +445,20 @@ impl EventLog {
 
     /// Log service started event.
     pub fn log_service_started(&self) -> Result<()> {
-        self.log_info(EventId::SERVICE_STARTED, "EST Auto-Enrollment service started", None)
+        self.log_info(
+            EventId::SERVICE_STARTED,
+            "EST Auto-Enrollment service started",
+            None,
+        )
     }
 
     /// Log service stopped event.
     pub fn log_service_stopped(&self) -> Result<()> {
-        self.log_info(EventId::SERVICE_STOPPED, "EST Auto-Enrollment service stopped", None)
+        self.log_info(
+            EventId::SERVICE_STOPPED,
+            "EST Auto-Enrollment service stopped",
+            None,
+        )
     }
 
     /// Log enrollment started.
@@ -549,8 +562,8 @@ pub fn register_event_source() -> Result<()> {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
     use windows::Win32::System::Registry::{
-        RegCreateKeyExW, RegSetValueExW, HKEY_LOCAL_MACHINE, KEY_WRITE, REG_DWORD, REG_EXPAND_SZ,
-        REG_OPTION_NON_VOLATILE,
+        HKEY_LOCAL_MACHINE, KEY_WRITE, REG_DWORD, REG_EXPAND_SZ, REG_OPTION_NON_VOLATILE,
+        RegCreateKeyExW, RegSetValueExW,
     };
 
     let key_path = format!(
@@ -642,7 +655,7 @@ pub fn register_event_source() -> Result<()> {
 pub fn unregister_event_source() -> Result<()> {
     use std::ffi::OsStr;
     use std::os::windows::ffi::OsStrExt;
-    use windows::Win32::System::Registry::{RegDeleteKeyW, HKEY_LOCAL_MACHINE};
+    use windows::Win32::System::Registry::{HKEY_LOCAL_MACHINE, RegDeleteKeyW};
 
     let key_path = format!(
         "SYSTEM\\CurrentControlSet\\Services\\EventLog\\{}\\{}",
@@ -750,6 +763,7 @@ mod tests {
 
         // Logging should not fail (logs to tracing)
         log.log_service_started().unwrap();
-        log.log_info(EventId::CHECK_COMPLETED, "Test message", None).unwrap();
+        log.log_info(EventId::CHECK_COMPLETED, "Test message", None)
+            .unwrap();
     }
 }

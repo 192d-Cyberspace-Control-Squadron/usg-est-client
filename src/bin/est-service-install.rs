@@ -41,8 +41,8 @@ use std::path::PathBuf;
 
 #[cfg(all(windows, feature = "windows-service"))]
 use usg_est_client::windows::service::{
-    installer::{self, InstallConfig, ServiceAccount, StartType},
     SERVICE_DESCRIPTION, SERVICE_DISPLAY_NAME, SERVICE_NAME,
+    installer::{self, InstallConfig, ServiceAccount, StartType},
 };
 
 fn main() -> ExitCode {
@@ -116,7 +116,10 @@ fn print_usage(program: &str) {
     println!();
     println!("Examples:");
     println!("  {} install", program);
-    println!("  {} install --account networkservice --start-type delayed", program);
+    println!(
+        "  {} install --account networkservice --start-type delayed",
+        program
+    );
     println!("  {} uninstall", program);
     println!("  {} status", program);
     println!();
@@ -129,7 +132,10 @@ fn cmd_install(args: &[String]) -> Result<(), String> {
 
     // Check for admin privileges
     if !is_elevated() {
-        return Err("Administrator privileges required. Please run from an elevated command prompt.".to_string());
+        return Err(
+            "Administrator privileges required. Please run from an elevated command prompt."
+                .to_string(),
+        );
     }
 
     // Get the path to the service executable
@@ -184,7 +190,10 @@ fn cmd_install(args: &[String]) -> Result<(), String> {
     println!("Installing service '{}'...", config.name);
     println!("  Display Name: {}", config.display_name);
     println!("  Executable: {}", config.executable_path);
-    println!("  Account: {:?}", config.account.account_name().unwrap_or("LocalSystem"));
+    println!(
+        "  Account: {:?}",
+        config.account.account_name().unwrap_or("LocalSystem")
+    );
     println!("  Start Type: {:?}", config.start_type);
 
     installer::install_service(&config).map_err(|e| e.to_string())?;
@@ -192,7 +201,10 @@ fn cmd_install(args: &[String]) -> Result<(), String> {
     println!();
     println!("Service installed successfully.");
     println!();
-    println!("To start the service, run: {} start", env::args().next().unwrap_or_default());
+    println!(
+        "To start the service, run: {} start",
+        env::args().next().unwrap_or_default()
+    );
     println!("Or use: sc start {}", SERVICE_NAME);
 
     Ok(())
@@ -282,8 +294,8 @@ fn cmd_status() -> Result<(), String> {
 #[cfg(all(windows, feature = "windows-service"))]
 fn get_service_executable_path() -> Result<PathBuf, String> {
     // Look for est-autoenroll-service.exe in the same directory as this binary
-    let current_exe = env::current_exe()
-        .map_err(|e| format!("Failed to get current executable path: {}", e))?;
+    let current_exe =
+        env::current_exe().map_err(|e| format!("Failed to get current executable path: {}", e))?;
 
     let exe_dir = current_exe
         .parent()
@@ -330,6 +342,9 @@ fn parse_start_type(s: &str) -> Result<StartType, String> {
         "delayed" | "auto-delayed" | "automaticdelayed" => Ok(StartType::AutomaticDelayed),
         "manual" | "demand" => Ok(StartType::Manual),
         "disabled" => Ok(StartType::Disabled),
-        _ => Err(format!("Invalid start type: {}. Use: auto, delayed, manual, disabled", s)),
+        _ => Err(format!(
+            "Invalid start type: {}. Use: auto, delayed, manual, disabled",
+            s
+        )),
     }
 }

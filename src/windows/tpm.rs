@@ -121,8 +121,7 @@ impl TpmAvailability {
         use std::ffi::OsStr;
         use std::os::windows::ffi::OsStrExt;
         use windows::Win32::Security::Cryptography::{
-            NCryptOpenStorageProvider, NCryptFreeObject, NCryptGetProperty,
-            NCRYPT_PROV_HANDLE,
+            NCRYPT_PROV_HANDLE, NCryptFreeObject, NCryptGetProperty, NCryptOpenStorageProvider,
         };
 
         let provider_name = providers::PLATFORM;
@@ -134,11 +133,7 @@ impl TpmAvailability {
         let mut handle = NCRYPT_PROV_HANDLE::default();
 
         let result = unsafe {
-            NCryptOpenStorageProvider(
-                &mut handle,
-                windows::core::PCWSTR(wide_name.as_ptr()),
-                0,
-            )
+            NCryptOpenStorageProvider(&mut handle, windows::core::PCWSTR(wide_name.as_ptr()), 0)
         };
 
         if result.is_err() {
@@ -146,7 +141,10 @@ impl TpmAvailability {
                 is_available: false,
                 version: None,
                 manufacturer: None,
-                reason: Some("Platform Crypto Provider not available - TPM may not be present or enabled".to_string()),
+                reason: Some(
+                    "Platform Crypto Provider not available - TPM may not be present or enabled"
+                        .to_string(),
+                ),
                 is_ready: false,
                 supports_attestation: false,
             });
@@ -225,7 +223,9 @@ impl TpmKeyProvider {
         if !availability.is_available {
             return Err(EstError::platform(format!(
                 "TPM not available: {}",
-                availability.reason.unwrap_or_else(|| "unknown reason".to_string())
+                availability
+                    .reason
+                    .unwrap_or_else(|| "unknown reason".to_string())
             )));
         }
 
@@ -319,7 +319,10 @@ impl KeyProvider for TpmKeyProvider {
         let mut handle = self.inner.generate_key_pair(algorithm, label).await?;
 
         // Mark the key as TPM-protected in metadata
-        handle.metadata.attributes.insert("tpm_protected".to_string(), "true".to_string());
+        handle
+            .metadata
+            .attributes
+            .insert("tpm_protected".to_string(), "true".to_string());
 
         Ok(handle)
     }
@@ -398,9 +401,15 @@ pub async fn run_health_check() -> Result<TpmHealthCheck> {
         name: "TPM Presence".to_string(),
         passed: availability.is_available,
         details: if availability.is_available {
-            format!("TPM {} detected", availability.version.as_deref().unwrap_or("2.0"))
+            format!(
+                "TPM {} detected",
+                availability.version.as_deref().unwrap_or("2.0")
+            )
         } else {
-            availability.reason.clone().unwrap_or_else(|| "Not available".to_string())
+            availability
+                .reason
+                .clone()
+                .unwrap_or_else(|| "Not available".to_string())
         },
     });
 

@@ -161,13 +161,16 @@ impl CredentialManager {
         credential_type: CredentialType,
     ) -> Result<()> {
         use std::ptr;
-        use windows::core::PCWSTR;
         use windows::Win32::Security::Credentials::{
-            CredWriteW, CREDENTIALW, CRED_PERSIST_LOCAL_MACHINE,
+            CRED_PERSIST_LOCAL_MACHINE, CREDENTIALW, CredWriteW,
         };
+        use windows::core::PCWSTR;
 
         let full_target = self.full_target(target);
-        let target_wide: Vec<u16> = full_target.encode_utf16().chain(std::iter::once(0)).collect();
+        let target_wide: Vec<u16> = full_target
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
         let username_wide: Vec<u16> = username.encode_utf16().chain(std::iter::once(0)).collect();
         let password_bytes = password.as_bytes();
 
@@ -204,20 +207,21 @@ impl CredentialManager {
         _password: &str,
         _credential_type: CredentialType,
     ) -> Result<()> {
-        Err(EstError::platform(
-            "Credential Manager requires Windows",
-        ))
+        Err(EstError::platform("Credential Manager requires Windows"))
     }
 
     /// Retrieve a credential from Windows Credential Manager.
     #[cfg(windows)]
     pub fn get(&self, target: &str) -> Result<Option<StoredCredential>> {
         use std::slice;
+        use windows::Win32::Security::Credentials::{CREDENTIALW, CredFree, CredReadW};
         use windows::core::PCWSTR;
-        use windows::Win32::Security::Credentials::{CredFree, CredReadW, CREDENTIALW};
 
         let full_target = self.full_target(target);
-        let target_wide: Vec<u16> = full_target.encode_utf16().chain(std::iter::once(0)).collect();
+        let target_wide: Vec<u16> = full_target
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
 
         let mut cred_ptr: *mut CREDENTIALW = std::ptr::null_mut();
 
@@ -254,10 +258,8 @@ impl CredentialManager {
             let password = if cred.CredentialBlob.is_null() || cred.CredentialBlobSize == 0 {
                 String::new()
             } else {
-                let blob = slice::from_raw_parts(
-                    cred.CredentialBlob,
-                    cred.CredentialBlobSize as usize,
-                );
+                let blob =
+                    slice::from_raw_parts(cred.CredentialBlob, cred.CredentialBlobSize as usize);
                 String::from_utf8_lossy(blob).to_string()
             };
 
@@ -292,19 +294,20 @@ impl CredentialManager {
     /// Retrieve a credential (non-Windows stub).
     #[cfg(not(windows))]
     pub fn get(&self, _target: &str) -> Result<Option<StoredCredential>> {
-        Err(EstError::platform(
-            "Credential Manager requires Windows",
-        ))
+        Err(EstError::platform("Credential Manager requires Windows"))
     }
 
     /// Delete a credential from Windows Credential Manager.
     #[cfg(windows)]
     pub fn delete(&self, target: &str) -> Result<()> {
-        use windows::core::PCWSTR;
         use windows::Win32::Security::Credentials::CredDeleteW;
+        use windows::core::PCWSTR;
 
         let full_target = self.full_target(target);
-        let target_wide: Vec<u16> = full_target.encode_utf16().chain(std::iter::once(0)).collect();
+        let target_wide: Vec<u16> = full_target
+            .encode_utf16()
+            .chain(std::iter::once(0))
+            .collect();
 
         unsafe {
             CredDeleteW(
@@ -322,9 +325,7 @@ impl CredentialManager {
     /// Delete a credential (non-Windows stub).
     #[cfg(not(windows))]
     pub fn delete(&self, _target: &str) -> Result<()> {
-        Err(EstError::platform(
-            "Credential Manager requires Windows",
-        ))
+        Err(EstError::platform("Credential Manager requires Windows"))
     }
 
     /// Check if a credential exists.
@@ -371,7 +372,7 @@ impl Dpapi {
     pub fn encrypt(&self, data: &[u8]) -> Result<Vec<u8>> {
         use std::ptr;
         use windows::Win32::Security::Cryptography::{
-            CryptProtectData, CRYPTPROTECT_LOCAL_MACHINE, CRYPT_INTEGER_BLOB,
+            CRYPT_INTEGER_BLOB, CRYPTPROTECT_LOCAL_MACHINE, CryptProtectData,
         };
 
         let mut input_blob = CRYPT_INTEGER_BLOB {
@@ -407,9 +408,9 @@ impl Dpapi {
                     .to_vec();
 
             // Free the output buffer
-            windows::Win32::System::Memory::LocalFree(
-                windows::Win32::Foundation::HLOCAL(output_blob.pbData as *mut _),
-            );
+            windows::Win32::System::Memory::LocalFree(windows::Win32::Foundation::HLOCAL(
+                output_blob.pbData as *mut _,
+            ));
 
             Ok(result)
         }
@@ -425,7 +426,7 @@ impl Dpapi {
     #[cfg(windows)]
     pub fn decrypt(&self, encrypted: &[u8]) -> Result<Vec<u8>> {
         use std::ptr;
-        use windows::Win32::Security::Cryptography::{CryptUnprotectData, CRYPT_INTEGER_BLOB};
+        use windows::Win32::Security::Cryptography::{CRYPT_INTEGER_BLOB, CryptUnprotectData};
 
         let mut input_blob = CRYPT_INTEGER_BLOB {
             cbData: encrypted.len() as u32,
@@ -454,9 +455,9 @@ impl Dpapi {
                     .to_vec();
 
             // Free the output buffer
-            windows::Win32::System::Memory::LocalFree(
-                windows::Win32::Foundation::HLOCAL(output_blob.pbData as *mut _),
-            );
+            windows::Win32::System::Memory::LocalFree(windows::Win32::Foundation::HLOCAL(
+                output_blob.pbData as *mut _,
+            ));
 
             Ok(result)
         }
