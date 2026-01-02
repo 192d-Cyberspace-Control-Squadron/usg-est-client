@@ -24,17 +24,17 @@
 //! use usg_est_client::metrics::{MetricsCollector, OperationType};
 //! use std::time::Instant;
 //!
-//! # fn example() {
+//! # async fn example() {
 //! // Create metrics collector
 //! let metrics = MetricsCollector::new();
 //!
 //! // Record an operation
 //! let start = Instant::now();
 //! // ... perform EST operation ...
-//! metrics.record_operation(OperationType::SimpleEnroll, start.elapsed(), true);
+//! metrics.record_operation(OperationType::SimpleEnroll, start.elapsed(), true).await;
 //!
 //! // Get metrics summary
-//! let summary = metrics.get_summary();
+//! let summary = metrics.get_summary().await;
 //! println!("Total enrollments: {}", summary.enrollments.total);
 //! println!("Success rate: {:.2}%", summary.enrollments.success_rate());
 //! # }
