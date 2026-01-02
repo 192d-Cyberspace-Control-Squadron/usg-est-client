@@ -464,33 +464,35 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-### 10.3 Platform Support Expansion 🔄 IN PROGRESS
+### 10.3 Platform Support Expansion ⏸️ DEPRIORITIZED
 
-#### 10.3.1 WASM Support Investigation 🔄 IN PROGRESS
+#### 10.3.1 WASM Support Investigation ⏸️ DEPRIORITIZED
+
+**Status**: Investigation complete. Implementation deprioritized due to limited benefit for EST client use cases.
+
+**Findings**:
 
 - ✅ Research rustls WASM compatibility
   - **Result**: Not compatible - depends on `ring` which has native assembly
-  - `ring` cannot be compiled to WASM targets
-  - No pure-Rust TLS alternative is mature enough
 - ✅ Research reqwest WASM compatibility
-  - **Result**: Partial support for `wasm32-unknown-unknown`
-  - Browser uses native fetch API (TLS handled by browser)
-  - Limited configuration options in WASM mode
-  - WASI support via `tokio_wasi` and patches
+  - **Result**: Partial support via browser fetch API
 - ✅ Identify WASM-incompatible dependencies
   - **Critical blockers**: `rustls` (via `ring`), `tokio` (multi-threading)
-  - **Medium blockers**: `rcgen` (via `ring`), `cryptoki` (native FFI)
   - **Compatible**: RustCrypto crates (`x509-cert`, `der`, `cms`, etc.)
 - ✅ Create WASM compatibility matrix document
   - See [docs/wasm-compatibility.md](docs/wasm-compatibility.md)
-  - Detailed analysis of all dependencies
-  - Three strategies documented: Browser, WASI, Types-only
-- [ ] Evaluate alternative HTTP clients for WASM (web-sys fetch)
-- [ ] Create proof-of-concept WASM build
-- [ ] Document WASM limitations and workarounds
-- [ ] Add WASM example if feasible
 
-#### 10.3.2 Embedded/no_std Support Investigation
+**Deprioritization Rationale**:
+
+- EST requires TLS - browser handles this, removing control over client certificates
+- Target environments (devices/servers) run native code
+- PKI operations benefit from native OS integration (cert stores, HSMs)
+- Significant refactoring effort for niche use case
+- No current user demand
+
+**Future**: May revisit if user demand emerges or WASI Preview 3 matures.
+
+#### 10.3.2 Embedded/no_std Support Investigation ⏸️ DEPRIORITIZED
 
 - [ ] Audit dependencies for no_std compatibility
 - [ ] Identify std-only features in current implementation
