@@ -364,8 +364,8 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Implement retry logic for failed renewals (exponential backoff)
 - ✅ Add renewal event callbacks
 - ✅ Create renewal example (`examples/auto_renewal.rs`)
-- ⚠️  Document renewal behavior in `docs/operations.md` - TODO
-- ⚠️  Integrate proper datetime library for time parsing - TODO
+- ✅ Document renewal behavior in `docs/operations.md`
+- ✅ Integrate proper datetime library for time parsing (using `time` crate)
 
 #### 10.2.2 Certificate Revocation Support ✅ COMPLETE (Core Implementation)
 

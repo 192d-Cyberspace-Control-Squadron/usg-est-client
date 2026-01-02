@@ -822,6 +822,443 @@ match client.full_cmc(&cmc_request).await {
 
 ---
 
+## Automatic Certificate Renewal
+
+The library provides automatic certificate renewal capabilities through the `renewal` feature. This allows certificates to be monitored for expiration and automatically renewed before they expire.
+
+### Overview
+
+The automatic renewal system consists of:
+
+- **RenewalScheduler**: Background task that monitors certificate expiration
+- **RenewalConfig**: Configuration for renewal behavior
+- **RenewalEventHandler**: Trait for handling renewal events
+
+### Renewal Basic Usage
+
+```rust
+use usg_est_client::renewal::{RenewalScheduler, RenewalConfig};
+use std::time::Duration;
+
+// Create EST client
+let config = EstClientConfig::builder()
+    .server_url("https://est.example.com")?
+    .build()?;
+
+let client = EstClient::new(config).await?;
+
+// Configure renewal behavior
+let renewal_config = RenewalConfig::builder()
+    .renewal_threshold(Duration::from_secs(30 * 24 * 60 * 60))  // 30 days
+    .check_interval(Duration::from_secs(24 * 60 * 60))          // Check daily
+    .max_retries(3)
+    .build();
+
+// Create and start the scheduler
+let scheduler = RenewalScheduler::new(client, renewal_config);
+
+// The scheduler will now:
+// 1. Check certificate expiration daily
+// 2. Trigger renewal 30 days before expiration
+// 3. Retry up to 3 times on failure
+```
+
+### Configuration Options
+
+The `RenewalConfig` provides fine-grained control over renewal behavior:
+
+```rust
+let config = RenewalConfig::builder()
+    // When to renew: 30 days before expiration
+    .renewal_threshold(Duration::from_secs(30 * 24 * 60 * 60))
+
+    // How often to check: every 24 hours
+    .check_interval(Duration::from_secs(24 * 60 * 60))
+
+    // Retry behavior
+    .max_retries(3)
+    .initial_retry_delay(Duration::from_secs(1))
+
+    // Event handling (optional)
+    // .event_callback(handler)
+
+    .build();
+```
+
+#### Configuration Parameters
+
+| Parameter | Type | Description | Default |
+|-----------|------|-------------|---------|
+| `renewal_threshold` | `Duration` | How far before expiration to trigger renewal | Required |
+| `check_interval` | `Duration` | How often to check certificate expiration | Required |
+| `max_retries` | `u32` | Maximum number of retry attempts | `3` |
+| `initial_retry_delay` | `Duration` | Initial delay before first retry | `1s` |
+
+### Retry Behavior
+
+Failed renewal attempts are automatically retried with exponential backoff:
+
+- **Attempt 1**: Immediate (on threshold)
+- **Attempt 2**: After 1 second
+- **Attempt 3**: After 2 seconds (2^1)
+- **Attempt 4**: After 4 seconds (2^2)
+- etc.
+
+The retry delay doubles with each attempt, providing graceful degradation during temporary server unavailability.
+
+### Event Handling
+
+Implement the `RenewalEventHandler` trait to receive notifications about renewal events:
+
+```rust
+use usg_est_client::renewal::{RenewalEvent, RenewalEventHandler};
+
+struct MyEventHandler;
+
+impl RenewalEventHandler for MyEventHandler {
+    fn on_event(&self, event: &RenewalEvent) {
+        match event {
+            RenewalEvent::CheckStarted => {
+                println!("Starting expiration check");
+            }
+            RenewalEvent::RenewalNeeded { expires_at } => {
+                println!("Certificate expires at {:?}, renewal needed", expires_at);
+            }
+            RenewalEvent::RenewalStarted => {
+                println!("Beginning renewal attempt");
+            }
+            RenewalEvent::RenewalSucceeded { certificate } => {
+                println!("Renewal succeeded!");
+                // Save new certificate
+            }
+            RenewalEvent::RenewalFailed { error, attempt } => {
+                eprintln!("Renewal attempt {} failed: {}", attempt, error);
+            }
+            RenewalEvent::RenewalExhausted { last_error } => {
+                eprintln!("All renewal attempts exhausted: {}", last_error);
+                // Alert operators
+            }
+        }
+    }
+}
+
+// Configure with event handler
+let config = RenewalConfig::builder()
+    .renewal_threshold(Duration::from_secs(30 * 24 * 60 * 60))
+    .check_interval(Duration::from_secs(24 * 60 * 60))
+    .event_callback(Arc::new(MyEventHandler))
+    .build();
+```
+
+### Renewal Events
+
+The `RenewalEvent` enum provides detailed information about the renewal lifecycle:
+
+- **CheckStarted**: Periodic expiration check initiated
+- **RenewalNeeded**: Certificate is nearing expiration (within threshold)
+- **RenewalStarted**: Renewal attempt beginning
+- **RenewalSucceeded**: New certificate successfully obtained
+- **RenewalFailed**: Renewal attempt failed (will retry if attempts remain)
+- **RenewalExhausted**: All retry attempts exhausted
+
+### Integration with Simple Re-enrollment
+
+The renewal scheduler uses the `simple_reenroll` operation internally:
+
+```rust
+// The scheduler does this automatically:
+let new_cert = client.simple_reenroll(&csr_der).await?;
+```
+
+You can also trigger manual renewal:
+
+```rust
+// Generate new CSR with existing or new key pair
+let (csr_der, key_pair) = CsrBuilder::new()
+    .common_name("device.example.com")
+    .build()?;
+
+// Submit re-enrollment request
+match client.simple_reenroll(&csr_der).await? {
+    EnrollmentResponse::Issued { certificate } => {
+        // Replace old certificate with new one
+    }
+    EnrollmentResponse::Pending { retry_after } => {
+        // Handle pending state
+    }
+}
+```
+
+### Best Practices
+
+#### 1. Choose Appropriate Thresholds
+
+```rust
+// Production: Renew 30 days before expiration
+.renewal_threshold(Duration::from_secs(30 * 24 * 60 * 60))
+
+// Short-lived certificates: Renew at 50% of lifetime
+// For a 7-day cert, renew after 3.5 days
+.renewal_threshold(Duration::from_secs(3 * 24 * 60 * 60 + 12 * 60 * 60))
+```
+
+**Recommendations**:
+
+- For 1-year certificates: 30-60 days before expiration
+- For 90-day certificates: 15-30 days before expiration
+- For short-lived certificates (7 days): 50% of lifetime
+
+#### 2. Monitor Renewal Events
+
+Always implement event handlers to track renewal success/failure:
+
+```rust
+impl RenewalEventHandler for ProductionHandler {
+    fn on_event(&self, event: &RenewalEvent) {
+        match event {
+            RenewalEvent::RenewalSucceeded { .. } => {
+                // Log success to monitoring system
+                metrics.increment("cert_renewal_success");
+            }
+            RenewalEvent::RenewalExhausted { last_error } => {
+                // Alert on-call team
+                alert_ops("Certificate renewal failed", last_error);
+            }
+            _ => {}
+        }
+    }
+}
+```
+
+#### 3. Handle Renewal Failures Gracefully
+
+```rust
+RenewalEvent::RenewalExhausted { last_error } => {
+    // 1. Alert operators immediately
+    send_alert("Critical: Certificate renewal failed");
+
+    // 2. Log detailed error information
+    error!("Renewal exhausted after all retries: {}", last_error);
+
+    // 3. Consider fallback options:
+    //    - Manual intervention
+    //    - Secondary EST server
+    //    - Certificate from backup CA
+}
+```
+
+#### 4. Persist Certificate State
+
+```rust
+RenewalEvent::RenewalSucceeded { certificate } => {
+    // Atomically replace certificate
+    let cert_pem = pem::encode(&Pem::new("CERTIFICATE", certificate_der));
+
+    // Write to temporary file first
+    fs::write("/etc/pki/cert.pem.new", cert_pem)?;
+
+    // Atomic rename
+    fs::rename("/etc/pki/cert.pem.new", "/etc/pki/cert.pem")?;
+
+    // Reload services using the certificate
+    reload_tls_services()?;
+}
+```
+
+#### 5. Test Renewal Process
+
+```rust
+// Test renewal workflow before deployment
+#[cfg(test)]
+mod tests {
+    #[tokio::test]
+    async fn test_renewal_workflow() {
+        let config = RenewalConfig::builder()
+            .renewal_threshold(Duration::from_secs(60))  // 1 minute for testing
+            .check_interval(Duration::from_secs(10))
+            .build();
+
+        // Verify scheduler triggers renewal correctly
+    }
+}
+```
+
+### Production Deployment
+
+#### Systemd Service Example
+
+```ini
+[Unit]
+Description=EST Certificate Renewal Service
+After=network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/my-est-client-daemon
+Restart=always
+RestartSec=10
+
+# Security hardening
+PrivateTmp=true
+NoNewPrivileges=true
+ReadOnlyPaths=/usr
+ReadWritePaths=/var/lib/my-app/certs
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### Docker Container
+
+```dockerfile
+FROM rust:1.70 as builder
+WORKDIR /app
+COPY . .
+RUN cargo build --release --features renewal
+
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y ca-certificates
+COPY --from=builder /app/target/release/my-est-client /usr/local/bin/
+CMD ["my-est-client"]
+```
+
+#### Kubernetes CronJob
+
+For environments where persistent renewal daemons are not desired:
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cert-renewal-check
+spec:
+  schedule: "0 0 * * *"  # Daily at midnight
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: renewal
+            image: my-est-client:latest
+            args: ["--check-renewal"]
+          restartPolicy: OnFailure
+```
+
+### Monitoring and Alerting
+
+Key metrics to track:
+
+```rust
+// Example with custom metrics
+impl RenewalEventHandler for MetricsHandler {
+    fn on_event(&self, event: &RenewalEvent) {
+        match event {
+            RenewalEvent::CheckStarted => {
+                metrics.increment("renewal_checks_total");
+            }
+            RenewalEvent::RenewalNeeded { expires_at } => {
+                let days_until_expiry = (*expires_at - SystemTime::now())
+                    .as_secs() / (24 * 60 * 60);
+                metrics.gauge("cert_days_until_expiry", days_until_expiry as f64);
+            }
+            RenewalEvent::RenewalSucceeded { .. } => {
+                metrics.increment("renewal_success_total");
+                metrics.gauge("renewal_last_success_timestamp", unix_timestamp());
+            }
+            RenewalEvent::RenewalFailed { .. } => {
+                metrics.increment("renewal_failures_total");
+            }
+            RenewalEvent::RenewalExhausted { .. } => {
+                metrics.increment("renewal_exhausted_total");
+                // Trigger PagerDuty/OpsGenie alert
+                alert_critical("Certificate renewal failed completely");
+            }
+            _ => {}
+        }
+    }
+}
+```
+
+**Recommended Alerts**:
+
+1. Certificate expires in < 14 days (Warning)
+2. Certificate expires in < 7 days (Critical)
+3. Renewal failed (Warning)
+4. Renewal exhausted after all retries (Critical)
+5. No successful renewal in > 30 days (Warning)
+
+### Renewal vs. Manual Re-enrollment
+
+| Aspect | Automatic Renewal | Manual Re-enrollment |
+|--------|-------------------|---------------------|
+| Trigger | Time-based (threshold) | Explicit API call |
+| Scheduling | Built-in scheduler | Your responsibility |
+| Retries | Automatic exponential backoff | Manual implementation |
+| Events | RenewalEventHandler trait | Return values only |
+| Use Case | Production services | Testing, one-time renewal |
+
+### Security Considerations
+
+1. **Certificate Storage**: Protect renewed certificates with appropriate file permissions
+2. **Private Key Protection**: Consider using HSM for private keys (see HSM documentation)
+3. **Audit Logging**: Log all renewal events for security audit trails
+4. **Time Synchronization**: Ensure system clock is accurate (NTP) for expiration checks
+5. **Graceful Degradation**: Plan for renewal failures with sufficient threshold margins
+
+### Troubleshooting
+
+#### Renewal Not Triggering
+
+```rust
+// Check scheduler is actually running
+let scheduler = RenewalScheduler::new(client, config);
+// Don't drop the scheduler! It stops when dropped.
+```
+
+#### Repeated Failures
+
+```rust
+RenewalEvent::RenewalFailed { error, .. } => {
+    // Common issues:
+    match error {
+        EstError::AuthenticationRequired { .. } => {
+            // Client certificate expired or invalid
+            error!("Authentication failed - check client certificate");
+        }
+        EstError::NetworkError { .. } => {
+            // Network connectivity issues
+            error!("Network error - check EST server reachability");
+        }
+        EstError::ServerError { status: 429, .. } => {
+            // Rate limited
+            error!("Rate limited by server");
+        }
+        _ => error!("Renewal failed: {}", error),
+    }
+}
+```
+
+#### Certificate Not Updated After Renewal
+
+Ensure you're handling the `RenewalSucceeded` event and persisting the new certificate:
+
+```rust
+RenewalEvent::RenewalSucceeded { certificate } => {
+    // Must save certificate AND reload TLS configuration
+    save_certificate(certificate)?;
+    reload_tls_config()?;  // Don't forget this!
+}
+```
+
+### See Also
+
+- [Simple Re-enrollment](#simple-re-enrollment-simplereenroll) - Manual re-enrollment
+- [Configuration Guide](configuration.md) - EST client configuration
+- [Security Considerations](security.md) - Security best practices
+- [Examples](../examples/auto_renewal.rs) - Complete renewal example
+
+---
+
 ## Error Handling
 
 All operations can return errors. Common error patterns:

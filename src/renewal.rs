@@ -403,28 +403,45 @@ impl RenewalScheduler {
 
     /// Calculate time until certificate expiration.
     fn time_until_expiry(cert: &Certificate) -> Result<Duration> {
-        use x509_cert::time::Time;
-
         let not_after = &cert.tbs_certificate.validity.not_after;
 
-        // Simplified time parsing - production code should use a proper datetime library
-        // For now, return a far future date to allow compilation
-        // TODO: Implement proper time parsing using chrono or time crate
-        let expiry_time = match not_after {
-            Time::UtcTime(_utc) => {
-                // Placeholder: Return far future (prevents false expiration)
-                SystemTime::UNIX_EPOCH + Duration::from_secs(u64::MAX / 2)
-            }
-            Time::GeneralTime(_gen) => {
-                // Placeholder: Return far future (prevents false expiration)
-                SystemTime::UNIX_EPOCH + Duration::from_secs(u64::MAX / 2)
-            }
-        };
+        // Parse X.509 time to SystemTime
+        let expiry_time = Self::parse_x509_time(not_after)?;
 
         let now = SystemTime::now();
         expiry_time
             .duration_since(now)
             .map_err(|_| EstError::operational("Certificate has already expired"))
+    }
+
+    /// Parse X.509 Time to SystemTime.
+    #[cfg(feature = "time")]
+    fn parse_x509_time(x509_time: &x509_cert::time::Time) -> Result<SystemTime> {
+        use x509_cert::time::Time;
+
+        // Both UtcTime and GeneralizedTime have to_unix_duration() method
+        let duration = match x509_time {
+            Time::UtcTime(utc) => utc.to_unix_duration(),
+            Time::GeneralTime(r#gen) => r#gen.to_unix_duration(),
+        };
+
+        Ok(SystemTime::UNIX_EPOCH + duration)
+    }
+
+    /// Parse X.509 Time to SystemTime (fallback when time feature is disabled).
+    #[cfg(not(feature = "time"))]
+    fn parse_x509_time(x509_time: &x509_cert::time::Time) -> Result<SystemTime> {
+        use x509_cert::time::Time;
+
+        // Without the time crate, return a placeholder far future time
+        // This allows compilation but renewal won't work correctly
+        let _ = x509_time; // Suppress unused warning
+        tracing::warn!(
+            "Renewal feature enabled without time crate - certificate expiration checks disabled"
+        );
+
+        // Return a time far in the future to prevent false expiration
+        Ok(SystemTime::UNIX_EPOCH + Duration::from_secs(u64::MAX / 2))
     }
 
     /// Calculate days since Unix epoch for a given date.

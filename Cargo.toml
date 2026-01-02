@@ -47,6 +47,9 @@ url = "2.5.7"
 # Logging
 tracing = "0.1.44"
 
+# Date/time handling (optional, for renewal feature)
+time = { version = "0.3", optional = true, features = ["formatting", "parsing", "macros"] }
+
 [dev-dependencies]
 tokio = { version = "1.47", features = ["rt-multi-thread", "macros"] }
 tracing-subscriber = "0.3.22"
@@ -61,7 +64,7 @@ required-features = ["csr-gen"]
 default = ["csr-gen"]
 csr-gen = ["rcgen"]
 hsm = []
-renewal = []
+renewal = ["time"]
 validation = []
 metrics = []
 revocation = []
