@@ -191,17 +191,21 @@ fn format_dn(name: &x509_cert::name::Name) -> String {
 
     let mut components = Vec::new();
 
-    for rdn in name.iter() {
-        for atv in rdn.iter() {
+    // Common DN attribute OIDs
+    const CN: der::asn1::ObjectIdentifier =
+        der::asn1::ObjectIdentifier::new_unwrap("2.5.4.3"); // commonName
+    const O: der::asn1::ObjectIdentifier =
+        der::asn1::ObjectIdentifier::new_unwrap("2.5.4.10"); // organizationName
+    const OU: der::asn1::ObjectIdentifier =
+        der::asn1::ObjectIdentifier::new_unwrap("2.5.4.11"); // organizationalUnitName
+    const C: der::asn1::ObjectIdentifier =
+        der::asn1::ObjectIdentifier::new_unwrap("2.5.4.6"); // countryName
+
+    for rdn in name.0.iter() {
+        for atv in rdn.0.iter() {
             // Get OID and value
             let oid = &atv.oid;
-            let value = atv.value.clone();
-
-            // Common DN attribute OIDs
-            const CN: der::asn1::ObjectIdentifier = der::asn1::ObjectIdentifier::new_unwrap("2.5.4.3"); // commonName
-            const O: der::asn1::ObjectIdentifier = der::asn1::ObjectIdentifier::new_unwrap("2.5.4.10"); // organizationName
-            const OU: der::asn1::ObjectIdentifier = der::asn1::ObjectIdentifier::new_unwrap("2.5.4.11"); // organizationalUnitName
-            const C: der::asn1::ObjectIdentifier = der::asn1::ObjectIdentifier::new_unwrap("2.5.4.6"); // countryName
+            let value = &atv.value;
 
             let attr_name = if *oid == CN {
                 "CN"
@@ -215,7 +219,7 @@ fn format_dn(name: &x509_cert::name::Name) -> String {
                 continue; // Skip unknown attributes
             };
 
-            // Extract string value
+            // Extract string value - try to get the inner bytes
             if let Ok(s) = std::str::from_utf8(value.value()) {
                 components.push(format!("{}={}", attr_name, s));
             }
@@ -229,26 +233,17 @@ fn format_dn(name: &x509_cert::name::Name) -> String {
 
 /// Format a Time value for display
 fn format_time(time: &x509_cert::time::Time) -> String {
-    match time {
-        x509_cert::time::Time::UtcTime(utc) => {
-            format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02} UTC",
-                utc.year() as u16 + 1900,
-                utc.month(),
-                utc.day(),
-                utc.hour(),
-                utc.minute(),
-                utc.second())
-        }
-        x509_cert::time::Time::GeneralTime(gen) => {
-            format!("{:04}-{:02}-{:02} {:02}:{:02}:{:02} UTC",
-                gen.year(),
-                gen.month(),
-                gen.day(),
-                gen.hour(),
-                gen.minute(),
-                gen.second())
-        }
-    }
+    // Convert to DateTime for consistent formatting
+    let datetime = time.to_date_time();
+    format!(
+        "{:04}-{:02}-{:02} {:02}:{:02}:{:02} UTC",
+        datetime.year(),
+        datetime.month(),
+        datetime.day(),
+        datetime.hour(),
+        datetime.minutes(),
+        datetime.seconds()
+    )
 }
 
 /// Calculate SHA-256 fingerprint of certificate

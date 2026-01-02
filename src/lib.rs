@@ -151,6 +151,9 @@ pub mod hsm;
 #[cfg(feature = "fips")]
 pub mod fips;
 
+#[cfg(feature = "dod-pki")]
+pub mod dod;
+
 #[cfg(feature = "renewal")]
 pub mod renewal;
 

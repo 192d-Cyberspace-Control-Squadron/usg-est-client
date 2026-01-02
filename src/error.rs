@@ -139,6 +139,14 @@ pub enum EstError {
     /// Algorithm not allowed in FIPS mode.
     #[error("Algorithm not allowed in FIPS mode: {0}")]
     FipsAlgorithmNotAllowed(String),
+
+    /// Certificate validation failed.
+    #[error("Certificate validation failed: {0}")]
+    CertificateValidation(String),
+
+    /// PKCS#11 / smart card error.
+    #[error("PKCS#11 error: {0}")]
+    Pkcs11(String),
 }
 
 impl EstError {
