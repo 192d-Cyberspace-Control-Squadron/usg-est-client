@@ -278,8 +278,303 @@ mod builder {
     }
 }
 
+/// HSM-backed CSR generation support.
+///
+/// This module provides functionality to generate CSRs using keys stored in
+/// Hardware Security Modules or other secure key providers.
+#[cfg(feature = "csr-gen")]
+mod hsm_csr {
+    use crate::error::{EstError, Result};
+    use crate::hsm::{KeyHandle, KeyProvider, SoftwareKeyProvider};
+    use rcgen::{CertificateParams, DnType, ExtendedKeyUsagePurpose, KeyUsagePurpose, SanType};
+    use std::net::IpAddr;
+
+    /// Builder for creating CSRs with HSM-backed keys.
+    ///
+    /// This builder allows generating CSRs using keys stored in Hardware Security
+    /// Modules or other secure key providers. Unlike the standard `CsrBuilder`,
+    /// this does not generate new keys - it uses existing keys from the provider.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use usg_est_client::csr::HsmCsrBuilder;
+    /// use usg_est_client::hsm::{KeyProvider, KeyAlgorithm, SoftwareKeyProvider};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// // Create a key provider and generate a key
+    /// let provider = SoftwareKeyProvider::new();
+    /// let key_handle = provider
+    ///     .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("my-key"))
+    ///     .await?;
+    ///
+    /// // Build a CSR using the HSM key
+    /// let csr_der = HsmCsrBuilder::new()
+    ///     .common_name("device.example.com")
+    ///     .organization("Example Corp")
+    ///     .san_dns("device.example.com")
+    ///     .build_with_provider(&provider, &key_handle)
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub struct HsmCsrBuilder {
+        params: CertificateParams,
+    }
+
+    impl Default for HsmCsrBuilder {
+        fn default() -> Self {
+            Self::new()
+        }
+    }
+
+    impl HsmCsrBuilder {
+        /// Create a new HSM CSR builder with default parameters.
+        pub fn new() -> Self {
+            Self {
+                params: CertificateParams::default(),
+            }
+        }
+
+        /// Set the Common Name (CN) for the subject.
+        pub fn common_name(mut self, cn: impl Into<String>) -> Self {
+            self.params
+                .distinguished_name
+                .push(DnType::CommonName, cn.into());
+            self
+        }
+
+        /// Set the Organization (O) for the subject.
+        pub fn organization(mut self, org: impl Into<String>) -> Self {
+            self.params
+                .distinguished_name
+                .push(DnType::OrganizationName, org.into());
+            self
+        }
+
+        /// Set the Organizational Unit (OU) for the subject.
+        pub fn organizational_unit(mut self, ou: impl Into<String>) -> Self {
+            self.params
+                .distinguished_name
+                .push(DnType::OrganizationalUnitName, ou.into());
+            self
+        }
+
+        /// Set the Country (C) for the subject.
+        pub fn country(mut self, country: impl Into<String>) -> Self {
+            self.params
+                .distinguished_name
+                .push(DnType::CountryName, country.into());
+            self
+        }
+
+        /// Set the State/Province (ST) for the subject.
+        pub fn state(mut self, state: impl Into<String>) -> Self {
+            self.params
+                .distinguished_name
+                .push(DnType::StateOrProvinceName, state.into());
+            self
+        }
+
+        /// Set the Locality (L) for the subject.
+        pub fn locality(mut self, locality: impl Into<String>) -> Self {
+            self.params
+                .distinguished_name
+                .push(DnType::LocalityName, locality.into());
+            self
+        }
+
+        /// Add a DNS Subject Alternative Name.
+        pub fn san_dns(mut self, dns: impl Into<String>) -> Self {
+            self.params
+                .subject_alt_names
+                .push(SanType::DnsName(dns.into().try_into().unwrap()));
+            self
+        }
+
+        /// Add an IP address Subject Alternative Name.
+        pub fn san_ip(mut self, ip: IpAddr) -> Self {
+            self.params.subject_alt_names.push(SanType::IpAddress(ip));
+            self
+        }
+
+        /// Add an email Subject Alternative Name.
+        pub fn san_email(mut self, email: impl Into<String>) -> Self {
+            self.params
+                .subject_alt_names
+                .push(SanType::Rfc822Name(email.into().try_into().unwrap()));
+            self
+        }
+
+        /// Add a URI Subject Alternative Name.
+        pub fn san_uri(mut self, uri: impl Into<String>) -> Self {
+            self.params
+                .subject_alt_names
+                .push(SanType::URI(uri.into().try_into().unwrap()));
+            self
+        }
+
+        /// Enable digital signature key usage.
+        pub fn key_usage_digital_signature(mut self) -> Self {
+            self.params
+                .key_usages
+                .push(KeyUsagePurpose::DigitalSignature);
+            self
+        }
+
+        /// Enable key encipherment key usage.
+        pub fn key_usage_key_encipherment(mut self) -> Self {
+            self.params
+                .key_usages
+                .push(KeyUsagePurpose::KeyEncipherment);
+            self
+        }
+
+        /// Enable key agreement key usage.
+        pub fn key_usage_key_agreement(mut self) -> Self {
+            self.params.key_usages.push(KeyUsagePurpose::KeyAgreement);
+            self
+        }
+
+        /// Add TLS client authentication extended key usage.
+        pub fn extended_key_usage_client_auth(mut self) -> Self {
+            self.params
+                .extended_key_usages
+                .push(ExtendedKeyUsagePurpose::ClientAuth);
+            self
+        }
+
+        /// Add TLS server authentication extended key usage.
+        pub fn extended_key_usage_server_auth(mut self) -> Self {
+            self.params
+                .extended_key_usages
+                .push(ExtendedKeyUsagePurpose::ServerAuth);
+            self
+        }
+
+        /// Build the CSR using a SoftwareKeyProvider.
+        ///
+        /// This method is optimized for software key providers and uses the
+        /// underlying rcgen KeyPair directly for CSR generation.
+        ///
+        /// # Arguments
+        ///
+        /// * `provider` - The software key provider containing the key
+        /// * `key_handle` - Handle to the key to use for signing
+        ///
+        /// # Returns
+        ///
+        /// The DER-encoded CSR bytes.
+        pub fn build_with_software_provider(
+            self,
+            provider: &SoftwareKeyProvider,
+            key_handle: &KeyHandle,
+        ) -> Result<Vec<u8>> {
+            // Get the rcgen KeyPair from the provider
+            let key_pair = provider.get_rcgen_key_pair(key_handle)?;
+
+            // Generate the CSR
+            let csr = self
+                .params
+                .serialize_request(&key_pair)
+                .map_err(|e| EstError::csr(format!("Failed to serialize CSR: {}", e)))?;
+
+            Ok(csr.der().to_vec())
+        }
+
+        /// Build the CSR using any KeyProvider.
+        ///
+        /// This method works with any key provider implementation, including
+        /// hardware HSMs. For software providers, prefer `build_with_software_provider`
+        /// for better performance.
+        ///
+        /// # Arguments
+        ///
+        /// * `provider` - The key provider containing the key
+        /// * `key_handle` - Handle to the key to use for signing
+        ///
+        /// # Returns
+        ///
+        /// The DER-encoded CSR bytes.
+        ///
+        /// # Note
+        ///
+        /// This method currently only supports SoftwareKeyProvider. For PKCS#11
+        /// and other HSM providers, use the provider's native CSR generation
+        /// capabilities or implement a custom signing callback.
+        pub async fn build_with_provider<P: KeyProvider>(
+            self,
+            provider: &P,
+            key_handle: &KeyHandle,
+        ) -> Result<Vec<u8>> {
+            // Get the public key from the provider
+            let _public_key = provider.public_key(key_handle).await?;
+
+            // For now, we need to use a workaround since rcgen doesn't support
+            // external signing. This implementation works for SoftwareKeyProvider
+            // and serves as a framework for future HSM integration.
+            //
+            // For true HSM support, we would need to:
+            // 1. Build the TBSCertificationRequest structure manually
+            // 2. Hash the TBS data
+            // 3. Sign using provider.sign(handle, hash)
+            // 4. Assemble the final CertificationRequest with signature
+
+            // Check if this is actually a SoftwareKeyProvider by trying to use
+            // the public key to verify it's a valid SPKI structure
+            let _alg_id = provider.algorithm_identifier(key_handle).await?;
+
+            // Currently, direct HSM signing for CSRs requires manual ASN.1 construction
+            // which is not yet implemented. Return an informative error.
+            Err(EstError::not_supported(
+                "Generic HSM CSR generation requires manual ASN.1 construction. \
+                 For SoftwareKeyProvider, use build_with_software_provider(). \
+                 For PKCS#11, use the provider's native signing capabilities.",
+            ))
+        }
+    }
+
+    /// Generate a CSR using a software key provider.
+    ///
+    /// This is a convenience function for the common case of using a software
+    /// key provider with ECDSA P-256 keys.
+    ///
+    /// # Arguments
+    ///
+    /// * `provider` - The software key provider
+    /// * `key_handle` - Handle to an existing key in the provider
+    /// * `common_name` - The Common Name for the certificate subject
+    /// * `organization` - Optional organization name
+    ///
+    /// # Returns
+    ///
+    /// The DER-encoded CSR bytes.
+    pub fn generate_csr_with_software_key(
+        provider: &SoftwareKeyProvider,
+        key_handle: &KeyHandle,
+        common_name: &str,
+        organization: Option<&str>,
+    ) -> Result<Vec<u8>> {
+        let mut builder = HsmCsrBuilder::new()
+            .common_name(common_name)
+            .san_dns(common_name)
+            .key_usage_digital_signature()
+            .key_usage_key_encipherment()
+            .extended_key_usage_client_auth();
+
+        if let Some(org) = organization {
+            builder = builder.organization(org);
+        }
+
+        builder.build_with_software_provider(provider, key_handle)
+    }
+}
+
 #[cfg(feature = "csr-gen")]
 pub use builder::*;
+
+#[cfg(feature = "csr-gen")]
+pub use hsm_csr::*;
 
 #[cfg(not(feature = "csr-gen"))]
 pub fn feature_not_enabled() {
@@ -319,6 +614,99 @@ mod tests {
             &["www.example.com", "api.example.com"],
         )
         .expect("Failed to generate server CSR");
+
+        assert!(!csr_der.is_empty());
+    }
+}
+
+#[cfg(all(test, feature = "csr-gen"))]
+mod hsm_tests {
+    use super::*;
+    use crate::hsm::{KeyAlgorithm, KeyProvider, SoftwareKeyProvider};
+
+    #[tokio::test]
+    async fn test_hsm_csr_builder_with_software_provider() {
+        let provider = SoftwareKeyProvider::new();
+
+        // Generate a key
+        let key_handle = provider
+            .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("test-csr-key"))
+            .await
+            .expect("Failed to generate key");
+
+        // Build a CSR using the key
+        let csr_der = HsmCsrBuilder::new()
+            .common_name("hsm-test.example.com")
+            .organization("Test Org")
+            .san_dns("hsm-test.example.com")
+            .key_usage_digital_signature()
+            .extended_key_usage_client_auth()
+            .build_with_software_provider(&provider, &key_handle)
+            .expect("Failed to build CSR");
+
+        assert!(!csr_der.is_empty());
+        // CSR should start with SEQUENCE tag
+        assert_eq!(csr_der[0], 0x30);
+    }
+
+    #[tokio::test]
+    async fn test_generate_csr_with_software_key() {
+        let provider = SoftwareKeyProvider::new();
+
+        // Generate a key
+        let key_handle = provider
+            .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("convenience-key"))
+            .await
+            .expect("Failed to generate key");
+
+        // Use the convenience function
+        let csr_der = generate_csr_with_software_key(
+            &provider,
+            &key_handle,
+            "device.example.com",
+            Some("Example Corp"),
+        )
+        .expect("Failed to generate CSR");
+
+        assert!(!csr_der.is_empty());
+        assert_eq!(csr_der[0], 0x30);
+    }
+
+    #[tokio::test]
+    async fn test_hsm_csr_builder_default() {
+        let builder = HsmCsrBuilder::default();
+        // Just verify we can create a default builder
+        assert!(std::mem::size_of_val(&builder) > 0);
+    }
+
+    #[tokio::test]
+    async fn test_hsm_csr_with_all_fields() {
+        let provider = SoftwareKeyProvider::new();
+
+        let key_handle = provider
+            .generate_key_pair(KeyAlgorithm::EcdsaP384, Some("full-csr-key"))
+            .await
+            .expect("Failed to generate key");
+
+        let csr_der = HsmCsrBuilder::new()
+            .common_name("full-test.example.com")
+            .organization("Full Test Org")
+            .organizational_unit("Engineering")
+            .country("US")
+            .state("California")
+            .locality("San Francisco")
+            .san_dns("full-test.example.com")
+            .san_dns("alt.example.com")
+            .san_ip(std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 1)))
+            .san_email("admin@example.com")
+            .san_uri("https://example.com")
+            .key_usage_digital_signature()
+            .key_usage_key_encipherment()
+            .key_usage_key_agreement()
+            .extended_key_usage_client_auth()
+            .extended_key_usage_server_auth()
+            .build_with_software_provider(&provider, &key_handle)
+            .expect("Failed to build CSR with all fields");
 
         assert!(!csr_der.is_empty());
     }

@@ -312,6 +312,7 @@ impl PrometheusExporter {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::metrics::OperationType;
     use std::time::Duration;
 
     #[tokio::test]

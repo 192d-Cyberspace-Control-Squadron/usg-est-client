@@ -377,16 +377,92 @@ let pem = key_info.to_pem();
 std::fs::write("private-key.pem", pem)?;
 ```
 
+### Decrypting Encrypted Private Keys
+
+When the server returns an encrypted private key (`key_encrypted: true`), you can decrypt it using the `enveloped` module:
+
+```rust
+use usg_est_client::enveloped::{
+    decrypt_enveloped_data, is_encrypted_key, parse_enveloped_data,
+    DecryptionKey, EncryptionAlgorithm
+};
+
+// Check if the key is encrypted
+if is_encrypted_key(&response.private_key) {
+    // Parse the EnvelopedData structure
+    let envelope = parse_enveloped_data(&response.private_key)?;
+
+    println!("Encryption algorithm: {:?}", envelope.content_encryption_algorithm);
+    println!("Recipients: {}", envelope.recipients.len());
+
+    // Get the content encryption key (from key transport, key agreement, etc.)
+    // This typically comes from:
+    // - A pre-shared transport key
+    // - Key derived from your private key (for KeyAgreeRecipientInfo)
+    // - Key unwrapped using your RSA private key (for KeyTransRecipientInfo)
+    let content_key = obtain_content_key(&envelope, &your_private_key)?;
+
+    // Create decryption key
+    let decryption_key = DecryptionKey::new(
+        content_key,
+        envelope.content_encryption_algorithm,
+    )?;
+
+    // Decrypt the private key
+    let decrypted_key = decrypt_enveloped_data(
+        &response.private_key,
+        &decryption_key
+    )?;
+
+    println!("Decrypted PKCS#8 private key: {} bytes", decrypted_key.len());
+}
+```
+
+### Supported Encryption Algorithms
+
+The library supports the following content encryption algorithms:
+
+| Algorithm | Key Size | Block Size | OID |
+|-----------|----------|------------|-----|
+| AES-128-CBC | 16 bytes | 16 bytes | 2.16.840.1.101.3.4.1.2 |
+| AES-192-CBC | 24 bytes | 16 bytes | 2.16.840.1.101.3.4.1.22 |
+| AES-256-CBC | 32 bytes | 16 bytes | 2.16.840.1.101.3.4.1.42 |
+| 3DES-CBC | 24 bytes | 8 bytes | 1.2.840.113549.3.7 |
+
+### EnvelopedData Structure
+
+The encrypted private key uses CMS EnvelopedData format (RFC 5652):
+
+```rust
+use usg_est_client::enveloped::{EnvelopedData, RecipientInfo};
+
+pub struct EnvelopedData {
+    pub version: u8,
+    pub recipients: Vec<RecipientInfo>,
+    pub content_encryption_algorithm: EncryptionAlgorithm,
+    pub encrypted_content: Vec<u8>,
+    pub iv: Option<Vec<u8>>,
+}
+
+pub struct RecipientInfo {
+    pub identifier: Vec<u8>,              // Recipient identifier
+    pub encrypted_key: Vec<u8>,           // Encrypted content encryption key
+    pub key_encryption_algorithm: String, // Key encryption algorithm
+}
+```
+
 ### Security Considerations
 
 - Server-generated private keys are transmitted over the network
 - Ensure TLS is properly configured with strong cipher suites
 - Consider using client-generated keys when possible for better security
 - Store private keys securely (encrypted at rest, proper permissions)
+- When using encrypted keys, protect the decryption key appropriately
 
 ### RFC Reference
 
 - RFC 7030 Section 4.4: Server-Side Key Generation
+- RFC 5652: Cryptographic Message Syntax (CMS)
 
 ---
 

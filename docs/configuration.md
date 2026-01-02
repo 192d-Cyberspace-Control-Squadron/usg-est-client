@@ -418,6 +418,196 @@ let client = EstClient::new(config).await?;
 
 ---
 
+## Hardware Security Module (HSM) Integration
+
+The library supports using keys stored in Hardware Security Modules for enhanced security.
+HSM integration is feature-gated behind the `hsm` feature flag.
+
+### Key Provider Abstraction
+
+All HSM operations use the `KeyProvider` trait, which abstracts key storage:
+
+```rust
+use usg_est_client::hsm::{KeyProvider, KeyAlgorithm, KeyHandle};
+
+// KeyProvider trait provides:
+// - generate_key_pair(): Create a new key pair
+// - public_key(): Get public key (SPKI format)
+// - sign(): Sign data (for PKCS#11 providers)
+// - list_keys(): List all keys
+// - find_key(): Find key by label
+// - delete_key(): Delete a key
+```
+
+### Software Key Provider (Development/Testing)
+
+For development and testing, use the `SoftwareKeyProvider`:
+
+```rust
+use usg_est_client::hsm::{KeyProvider, KeyAlgorithm, SoftwareKeyProvider};
+
+// Create provider
+let provider = SoftwareKeyProvider::new();
+
+// Generate a key
+let key_handle = provider
+    .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("my-device-key"))
+    .await?;
+
+// Get public key
+let public_key = provider.public_key(&key_handle).await?;
+
+// List all keys
+let keys = provider.list_keys().await?;
+```
+
+**Security Warning:** SoftwareKeyProvider stores keys in memory. Use only for:
+
+- Development and testing
+- Non-production environments
+- Environments where HSM hardware is unavailable
+
+### PKCS#11 Key Provider (Production)
+
+For production environments, use the `Pkcs11KeyProvider`:
+
+```rust
+use usg_est_client::hsm::{KeyProvider, KeyAlgorithm};
+use usg_est_client::hsm::pkcs11::Pkcs11KeyProvider;
+
+// Connect to HSM
+let provider = Pkcs11KeyProvider::new(
+    "/usr/lib/softhsm/libsofthsm2.so",  // PKCS#11 library path
+    None,                                 // Slot ID (None = auto-select)
+    "MyTokenPIN",                         // User PIN
+)?;
+
+// Generate key in HSM
+let key_handle = provider
+    .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("device-key"))
+    .await?;
+```
+
+**Supported HSMs:**
+
+- SoftHSM (testing)
+- YubiHSM
+- AWS CloudHSM
+- Thales Luna
+- Any PKCS#11 compliant device
+
+### HSM-Backed CSR Generation
+
+Generate CSRs using HSM-stored keys:
+
+```rust
+use usg_est_client::csr::{HsmCsrBuilder, generate_csr_with_software_key};
+use usg_est_client::hsm::{KeyProvider, KeyAlgorithm, SoftwareKeyProvider};
+
+// Option 1: Using SoftwareKeyProvider (optimized path)
+let provider = SoftwareKeyProvider::new();
+let key_handle = provider
+    .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("device-key"))
+    .await?;
+
+let csr_der = HsmCsrBuilder::new()
+    .common_name("device.example.com")
+    .organization("Example Corp")
+    .san_dns("device.example.com")
+    .key_usage_digital_signature()
+    .extended_key_usage_client_auth()
+    .build_with_software_provider(&provider, &key_handle)?;
+
+// Option 2: Using convenience function
+let csr_der = generate_csr_with_software_key(
+    &provider,
+    &key_handle,
+    "device.example.com",
+    Some("Example Corp"),
+)?;
+```
+
+### Supported Key Algorithms
+
+```rust
+use usg_est_client::hsm::KeyAlgorithm;
+
+// ECDSA P-256 (recommended for most use cases)
+KeyAlgorithm::EcdsaP256
+
+// ECDSA P-384 (higher security)
+KeyAlgorithm::EcdsaP384
+
+// RSA with various key sizes
+KeyAlgorithm::Rsa { bits: 2048 }  // Minimum for production
+KeyAlgorithm::Rsa { bits: 3072 }  // Recommended
+KeyAlgorithm::Rsa { bits: 4096 }  // Maximum security
+```
+
+### Key Metadata
+
+Keys include metadata for identification:
+
+```rust
+use usg_est_client::hsm::KeyMetadata;
+
+let handle = provider.generate_key_pair(
+    KeyAlgorithm::EcdsaP256,
+    Some("labeled-key"),
+).await?;
+
+// Access metadata
+let metadata = handle.metadata();
+println!("Label: {:?}", metadata.label);
+println!("Can sign: {}", metadata.can_sign);
+println!("Extractable: {}", metadata.extractable);
+```
+
+### Complete HSM Enrollment Example
+
+```rust
+use usg_est_client::{EstClient, EstClientConfig};
+use usg_est_client::csr::HsmCsrBuilder;
+use usg_est_client::hsm::{KeyProvider, KeyAlgorithm, SoftwareKeyProvider};
+
+async fn enroll_with_hsm() -> Result<(), Box<dyn std::error::Error>> {
+    // Create key provider
+    let provider = SoftwareKeyProvider::new();
+
+    // Generate key
+    let key_handle = provider
+        .generate_key_pair(KeyAlgorithm::EcdsaP256, Some("device-001"))
+        .await?;
+
+    // Build CSR
+    let csr_der = HsmCsrBuilder::new()
+        .common_name("device-001.example.com")
+        .organization("Example Corp")
+        .san_dns("device-001.example.com")
+        .key_usage_digital_signature()
+        .key_usage_key_encipherment()
+        .extended_key_usage_client_auth()
+        .build_with_software_provider(&provider, &key_handle)?;
+
+    // Configure EST client
+    let config = EstClientConfig::builder()
+        .server_url("https://est.example.com")?
+        .build()?;
+
+    let client = EstClient::new(config).await?;
+
+    // Enroll
+    let response = client.simple_enroll(&csr_der).await?;
+
+    // The key remains secure in the provider
+    // Certificate is now issued for the HSM-stored key
+
+    Ok(())
+}
+```
+
+---
+
 ## Next Steps
 
 - Review [Security Considerations](security.md)
