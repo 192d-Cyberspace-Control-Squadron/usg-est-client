@@ -62,7 +62,7 @@ hostname = { version = "0.4", optional = true }
 time = { version = "0.3", optional = true, features = ["formatting", "parsing", "macros"] }
 
 # PKCS#11 support (optional, for HSM integration)
-cryptoki = { version = "0.8", optional = true }
+cryptoki = { version = "0.11", optional = true }
 hex = { version = "0.4", optional = true }
 uuid = { version = "1.11", features = ["v4"], optional = true }
 
