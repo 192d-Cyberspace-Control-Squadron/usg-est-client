@@ -46,7 +46,7 @@
 //! gracefully if the server is unreachable.
 
 use std::fs;
-use usg_est_client::{EstClient, EstClientConfig, EstError, EnrollmentResponse};
+use usg_est_client::{EnrollmentResponse, EstClient, EstClientConfig, EstError};
 
 /// EST test server URLs
 const TEST_SERVER_URL_TLS_CHANNEL_ENABLED: &str = "https://testrfc7030.com:443";
@@ -62,8 +62,9 @@ const CA_CERT_PATH: &str = "tests/fixtures/certs/testrfc7030-ca.pem";
 
 /// Helper to load the CA certificate as PEM bytes
 fn load_ca_cert() -> Vec<u8> {
-    fs::read(CA_CERT_PATH)
-        .expect("Failed to read CA certificate - ensure tests/fixtures/certs/testrfc7030-ca.pem exists")
+    fs::read(CA_CERT_PATH).expect(
+        "Failed to read CA certificate - ensure tests/fixtures/certs/testrfc7030-ca.pem exists",
+    )
 }
 
 /// Check if an error indicates the server is unreachable
@@ -143,8 +144,7 @@ async fn test_live_get_cacerts() {
     for (i, cert) in certs.iter().enumerate() {
         println!(
             "CA Certificate {}: Subject = {:?}",
-            i,
-            cert.tbs_certificate.subject
+            i, cert.tbs_certificate.subject
         );
     }
 }
@@ -311,7 +311,10 @@ async fn test_live_tls_connection() {
         .expect("Valid config");
 
     let client = EstClient::new(config).await;
-    assert!(client.is_ok(), "TLS connection should succeed with correct CA");
+    assert!(
+        client.is_ok(),
+        "TLS connection should succeed with correct CA"
+    );
 
     // Verify /cacerts works
     let client = client.unwrap();
@@ -406,10 +409,7 @@ async fn test_live_full_enrollment_workflow() {
         }
         Err(e) => panic!("Failed to get CA certs: {:?}", e),
     };
-    println!(
-        "  ✓ Retrieved {} CA certificate(s)\n",
-        ca_certs.len()
-    );
+    println!("  ✓ Retrieved {} CA certificate(s)\n", ca_certs.len());
 
     // Step 2: Get CSR attributes (optional)
     println!("Step 2: Retrieving CSR attributes...");
@@ -441,10 +441,7 @@ async fn test_live_full_enrollment_workflow() {
     match auth_client.simple_enroll(&csr_der).await {
         Ok(EnrollmentResponse::Issued { certificate }) => {
             println!("  ✓ Enrollment successful!");
-            println!(
-                "    Subject: {:?}",
-                certificate.tbs_certificate.subject
-            );
+            println!("    Subject: {:?}", certificate.tbs_certificate.subject);
             println!(
                 "    Serial: {:?}",
                 certificate.tbs_certificate.serial_number

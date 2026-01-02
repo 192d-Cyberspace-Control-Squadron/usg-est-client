@@ -827,7 +827,10 @@ organization = "Org for ${TEST_HOST_A}"
             .unwrap();
 
         assert_eq!(config.certificate.common_name, "host.example.com");
-        assert_eq!(config.certificate.organization, Some("Org for host".to_string()));
+        assert_eq!(
+            config.certificate.organization,
+            Some("Org for host".to_string())
+        );
 
         unsafe {
             std::env::remove_var("TEST_HOST_A");
@@ -844,10 +847,10 @@ organization = "Org for ${TEST_HOST_A}"
         assert!(paths.iter().any(|p| p.ends_with("est-config.toml")));
 
         // Should include config.toml in current dir
-        assert!(paths.iter().any(|p| {
-            p.file_name()
-                .map(|n| n == "config.toml")
-                .unwrap_or(false)
-        }));
+        assert!(
+            paths
+                .iter()
+                .any(|p| { p.file_name().map(|n| n == "config.toml").unwrap_or(false) })
+        );
     }
 }

@@ -1024,10 +1024,7 @@ mod tests {
             shutdown_timeout: 60,
         };
 
-        assert_eq!(
-            config.config_path,
-            Some("/etc/est/config.toml".to_string())
-        );
+        assert_eq!(config.config_path, Some("/etc/est/config.toml".to_string()));
         assert!(config.verbose);
         assert_eq!(config.check_interval, 1800);
         assert!(!config.allow_pause);

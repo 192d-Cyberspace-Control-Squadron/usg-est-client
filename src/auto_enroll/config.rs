@@ -1243,8 +1243,7 @@ common_name = "test.example.com"
             "encipher_only",
             "decipher_only",
         ] {
-            let result: Result<KeyUsage, _> =
-                serde_json::from_str(&format!("\"{usage_str}\""));
+            let result: Result<KeyUsage, _> = serde_json::from_str(&format!("\"{usage_str}\""));
             assert!(result.is_ok(), "Failed to parse KeyUsage: {usage_str}");
         }
     }

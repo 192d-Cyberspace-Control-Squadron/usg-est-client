@@ -330,7 +330,14 @@ async fn run_command(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             san_dns,
             san_ip,
         } => {
-            cmd_enroll(&cli, *force, common_name.clone(), san_dns.clone(), san_ip.clone()).await
+            cmd_enroll(
+                &cli,
+                *force,
+                common_name.clone(),
+                san_dns.clone(),
+                san_ip.clone(),
+            )
+            .await
         }
         Commands::Renew { force, new_key } => cmd_renew(&cli, *force, *new_key).await,
         Commands::Status { detailed, format } => cmd_status(&cli, *detailed, *format).await,
@@ -340,14 +347,25 @@ async fn run_command(cli: Cli) -> Result<(), Box<dyn std::error::Error>> {
             format,
             include_key,
             password,
-        } => cmd_export(&cli, output.clone(), *format, *include_key, password.clone()).await,
+        } => {
+            cmd_export(
+                &cli,
+                output.clone(),
+                *format,
+                *include_key,
+                password.clone(),
+            )
+            .await
+        }
         Commands::Config { action } => cmd_config(&cli, action).await,
         Commands::Diagnose {
             tls_details,
             skip_auth,
         } => cmd_diagnose(&cli, *tls_details, *skip_auth).await,
         Commands::CaInfo { full_chain, format } => cmd_ca_info(&cli, *full_chain, *format).await,
-        Commands::CertInfo { thumbprint, format } => cmd_cert_info(&cli, thumbprint.clone(), *format).await,
+        Commands::CertInfo { thumbprint, format } => {
+            cmd_cert_info(&cli, thumbprint.clone(), *format).await
+        }
         Commands::TestCsr { format, output } => cmd_test_csr(&cli, *format, output.clone()).await,
     }
 }
@@ -398,10 +416,7 @@ async fn cmd_enroll(
     if !san_dns.is_empty() || !san_ip.is_empty() {
         use std::net::IpAddr;
 
-        let ip_addrs: Vec<IpAddr> = san_ip
-            .iter()
-            .filter_map(|s| s.parse().ok())
-            .collect();
+        let ip_addrs: Vec<IpAddr> = san_ip.iter().filter_map(|s| s.parse().ok()).collect();
 
         if let Some(ref mut san) = config.certificate.san {
             if !san_dns.is_empty() {
@@ -639,7 +654,9 @@ async fn cmd_check(
         match loader.load() {
             Ok(config) => config.server.url,
             Err(_) => {
-                return Err("No server URL provided. Use --server or configure in config file.".into());
+                return Err(
+                    "No server URL provided. Use --server or configure in config file.".into(),
+                );
             }
         }
     };
@@ -653,9 +670,7 @@ async fn cmd_check(
 
     // DNS resolution
     print!("DNS Resolution... ");
-    let host = url
-        .host_str()
-        .ok_or("Invalid URL: no host")?;
+    let host = url.host_str().ok_or("Invalid URL: no host")?;
     match tokio::net::lookup_host(format!("{}:{}", host, url.port().unwrap_or(443))).await {
         Ok(addrs) => {
             let addrs: Vec<_> = addrs.collect();
@@ -758,25 +773,23 @@ async fn cmd_config(cli: &Cli, action: &ConfigAction) -> Result<(), Box<dyn std:
             println!("Validating configuration...");
 
             match loader.load() {
-                Ok(config) => {
-                    match config.validate() {
-                        Ok(()) => {
-                            println!("Configuration is valid.");
-                            println!();
-                            println!("Summary:");
-                            println!("  Server: {}", config.server.url);
-                            println!("  Common Name: {}", config.certificate.common_name);
-                            println!("  Trust Mode: {:?}", config.trust.mode);
-                            println!("  Auth Method: {:?}", config.authentication.method);
-                            println!("  Renewal Enabled: {}", config.renewal.enabled);
-                        }
-                        Err(e) => {
-                            println!("Configuration validation failed:");
-                            println!("  {}", e);
-                            return Err("Validation failed".into());
-                        }
+                Ok(config) => match config.validate() {
+                    Ok(()) => {
+                        println!("Configuration is valid.");
+                        println!();
+                        println!("Summary:");
+                        println!("  Server: {}", config.server.url);
+                        println!("  Common Name: {}", config.certificate.common_name);
+                        println!("  Trust Mode: {:?}", config.trust.mode);
+                        println!("  Auth Method: {:?}", config.authentication.method);
+                        println!("  Renewal Enabled: {}", config.renewal.enabled);
                     }
-                }
+                    Err(e) => {
+                        println!("Configuration validation failed:");
+                        println!("  {}", e);
+                        return Err("Validation failed".into());
+                    }
+                },
                 Err(e) => {
                     println!("Failed to load configuration:");
                     println!("  {}", e);
@@ -842,7 +855,9 @@ async fn cmd_config(cli: &Cli, action: &ConfigAction) -> Result<(), Box<dyn std:
         ConfigAction::Init { output, force } => {
             use usg_est_client::auto_enroll::write_default_config;
 
-            let output_path = output.clone().unwrap_or_else(|| PathBuf::from("est-config.toml"));
+            let output_path = output
+                .clone()
+                .unwrap_or_else(|| PathBuf::from("est-config.toml"));
 
             if output_path.exists() && !*force {
                 return Err(format!(
@@ -859,10 +874,16 @@ async fn cmd_config(cli: &Cli, action: &ConfigAction) -> Result<(), Box<dyn std:
             }
 
             write_default_config(&output_path)?;
-            println!("Created default configuration file: {}", output_path.display());
+            println!(
+                "Created default configuration file: {}",
+                output_path.display()
+            );
             println!();
             println!("Edit the file to customize settings, then run:");
-            println!("  est-enroll config validate --config {}", output_path.display());
+            println!(
+                "  est-enroll config validate --config {}",
+                output_path.display()
+            );
         }
     }
     Ok(())
@@ -893,7 +914,9 @@ async fn cmd_diagnose(
         Err(e) => {
             println!("[WARN] Configuration: {}", e);
             if cli.server.is_none() {
-                return Err("No configuration available. Use --server to specify EST server.".into());
+                return Err(
+                    "No configuration available. Use --server to specify EST server.".into(),
+                );
             }
             println!("Using --server override...");
             None
@@ -1024,7 +1047,11 @@ async fn cmd_ca_info(
     let client = usg_est_client::EstClient::new(est_config).await?;
     let certs = client.get_ca_certs().await?;
 
-    let count = if full_chain { certs.len() } else { 1.min(certs.len()) };
+    let count = if full_chain {
+        certs.len()
+    } else {
+        1.min(certs.len())
+    };
 
     match format {
         OutputFormat::Text => {

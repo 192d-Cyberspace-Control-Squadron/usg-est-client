@@ -238,7 +238,7 @@ impl CredentialManager {
                 // Credential not found is not an error
                 return Ok(None);
             }
-            
+
             if cred_ptr.is_null() {
                 // CredReadW should set cred_ptr on success,
                 // but if it does not, treat as if no credential was found.
