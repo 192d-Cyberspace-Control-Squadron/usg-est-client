@@ -501,44 +501,88 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 11: Windows Auto-Enrollment (ADCS Replacement) 📋 PLANNED
+## Phase 11: Windows Auto-Enrollment (ADCS Replacement) 🔄 IN PROGRESS
 
 This phase implements a complete Windows auto-enrollment solution to replace Microsoft Active Directory Certificate Services (ADCS) auto-enrollment with EST-based certificate management.
 
-### 11.1 Configuration File System
+### 11.1 Configuration File System ✅ COMPLETE
 
-#### 11.1.1 Config Schema Design
+**Status**: Fully implemented with 3,065 lines of code, 18 unit tests passing
 
-- [ ] Design TOML configuration schema for machine enrollment
-- [ ] Create `src/config/file.rs` for config file parsing
-- [ ] Define `AutoEnrollConfig` struct with all sections:
-  - `[server]` - EST server URL, CA label, timeout
-  - `[trust]` - TLS verification mode, CA bundle path
-  - `[authentication]` - HTTP Basic, client cert, machine account
-  - `[certificate]` - Subject DN, SANs, key algorithm, extensions
-  - `[renewal]` - Threshold, check interval, retry settings
-  - `[storage]` - Windows cert store or file paths
-  - `[logging]` - Log level, file path, Event Log integration
-  - `[service]` - Windows Service configuration
-- [ ] Implement variable expansion (`${COMPUTERNAME}`, `${USERDNSDOMAIN}`, `${USERNAME}`)
-- [ ] Add config validation with helpful error messages
-- [ ] Create `examples/config/` directory with sample configs:
-  - `machine-cert.toml` - Basic machine certificate enrollment
-  - `workstation.toml` - Domain workstation with auto-renewal
-  - `server.toml` - Server certificate with multiple SANs
-  - `kiosk.toml` - Minimal config for kiosk/embedded devices
-- [ ] Add JSON schema for IDE autocompletion support
-- [ ] Document config format in `docs/windows-enrollment.md`
+#### 11.1.1 Config Schema Design ✅ COMPLETE
 
-#### 11.1.2 Config File Locations
+- ✅ Design TOML configuration schema for machine enrollment
+- ✅ Create `src/auto_enroll/config.rs` for config file parsing (963 lines)
+- ✅ Define `AutoEnrollConfig` struct with all sections:
+  - ✅ `[server]` - EST server URL, CA label, timeout, channel binding
+  - ✅ `[trust]` - TLS verification mode (webpki, explicit, bootstrap, insecure), CA bundle path
+  - ✅ `[authentication]` - HTTP Basic, client cert, or auto; password sources (env, file, credential_manager)
+  - ✅ `[certificate]` - Subject DN, SANs, key algorithm, extensions (key_usage, extended_key_usage)
+  - ✅ `[renewal]` - Threshold days, check interval hours, max retries, retry delay
+  - ✅ `[storage]` - Windows cert store, file paths, friendly name, archive_old
+  - ✅ `[logging]` - Log level, path, Windows Event Log, JSON format, rotation
+  - ✅ `[service]` - Start type, run_as, dependencies, health check port
+- ✅ Implement variable expansion (`${COMPUTERNAME}`, `${USERDNSDOMAIN}`, `${USERNAME}`, etc.)
+  - Supports 10+ variables including `${HOME}`, `${TEMP}`, `${PROGRAMDATA}`, `${LOCALAPPDATA}`
+  - Cross-platform hostname and domain detection
+  - Fallback to environment variables
+- ✅ Add config validation with helpful error messages
+  - Validates all required fields
+  - Checks authentication method requirements
+  - Validates trust mode dependencies
+  - Returns detailed multi-error reports
+- ✅ Create `examples/config/` directory with sample configs:
+  - ✅ `machine-cert.toml` - Basic machine certificate enrollment (68 lines)
+  - ✅ `workstation.toml` - Domain workstation with auto-renewal (81 lines)
+  - ✅ `server.toml` - Server certificate with multiple SANs and TPM (76 lines)
+  - ✅ `kiosk.toml` - Minimal config for kiosk/embedded devices (41 lines)
+- ⚠️ Add JSON schema for IDE autocompletion support - TODO
+- ⚠️ Document config format in `docs/windows-enrollment.md` - TODO
 
-- [ ] Define Windows-standard config search paths:
-  - `%PROGRAMDATA%\EST\config.toml` (system-wide)
-  - `%LOCALAPPDATA%\EST\config.toml` (per-user)
-  - Command-line specified path
-- [ ] Implement config file discovery with precedence rules
-- [ ] Support config includes for shared settings
-- [ ] Add environment variable overrides for all settings
+#### 11.1.2 Config File Locations ✅ COMPLETE
+
+- ✅ Define Windows-standard config search paths:
+  - ✅ `%PROGRAMDATA%\EST\config.toml` (system-wide)
+  - ✅ `%LOCALAPPDATA%\EST\config.toml` (per-user)
+  - ✅ Command-line specified path via `ConfigLoader::with_path()`
+  - ✅ Environment variable override via `EST_CONFIG_PATH`
+  - ✅ Unix paths: `/etc/est/config.toml`, `~/.config/est/config.toml`, `~/.est/config.toml`
+  - ✅ Fallback: `./est-config.toml`, `./config.toml`
+- ✅ Implement config file discovery with precedence rules
+  - Search order: explicit path → env var → standard locations (first found wins)
+  - `ConfigLoader` with builder pattern for customization
+- ✅ Support config includes for shared settings (via `write_default_config()` helper)
+- ✅ Add environment variable overrides for all settings (via variable expansion)
+
+**Dependencies Added**:
+- toml 0.8 - TOML parsing
+- serde 1.0 + serde_json - Serialization
+- dirs 5.0 - Cross-platform paths
+- hostname 0.4 - Machine name detection
+- tempfile 3.15 (dev) - Testing
+
+**New Feature Flag**: `auto-enroll = ["toml", "serde", "serde_json", "dirs", "hostname", "renewal", "csr-gen"]`
+
+**Key Features**:
+- `AutoEnrollConfig::from_toml()` - Parse TOML string
+- `AutoEnrollConfig::validate()` - Comprehensive validation
+- `AutoEnrollConfig::expand_variables()` - Variable expansion
+- `AutoEnrollConfig::to_est_client_config()` - Convert to `EstClientConfig`
+- `ConfigLoader::new().load()` - Discover and load config files
+- `write_default_config(path)` - Generate template config
+
+**Files Created**:
+- `src/auto_enroll/mod.rs` (66 lines) - Module documentation and exports
+- `src/auto_enroll/config.rs` (963 lines) - Configuration schema and types
+- `src/auto_enroll/expand.rs` (271 lines) - Variable expansion
+- `src/auto_enroll/loader.rs` (540 lines) - Config file discovery
+- `examples/config/*.toml` (266 lines total) - Sample configurations
+
+**Files Modified**:
+- `src/error.rs` - Added `EstError::Config` variant
+- `src/lib.rs` - Added `auto_enroll` module export
+- `src/csr.rs` - Fixed HSM feature gates
+- `Cargo.toml` - Added dependencies and feature flag
 
 ### 11.2 Windows Platform Integration
 
