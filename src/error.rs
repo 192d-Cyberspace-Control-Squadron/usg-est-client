@@ -115,6 +115,10 @@ pub enum EstError {
     /// I/O error.
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
+
+    /// Configuration error.
+    #[error("Configuration error: {0}")]
+    Config(String),
 }
 
 impl EstError {
@@ -205,6 +209,11 @@ impl EstError {
     /// Create a protocol error (uses CertificateParsing for generic protocol errors).
     pub fn protocol(msg: impl Into<String>) -> Self {
         Self::CertificateParsing(msg.into())
+    }
+
+    /// Create a configuration error with the given message.
+    pub fn config(msg: impl Into<String>) -> Self {
+        Self::Config(msg.into())
     }
 
     /// Returns true if this is a retryable error.

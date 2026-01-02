@@ -163,6 +163,9 @@ pub mod revocation;
 #[cfg(feature = "enveloped")]
 pub mod enveloped;
 
+#[cfg(feature = "auto-enroll")]
+pub mod auto_enroll;
+
 // Re-export main types at crate root for convenience
 pub use client::EstClient;
 pub use config::{

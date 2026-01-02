@@ -282,7 +282,7 @@ mod builder {
 ///
 /// This module provides functionality to generate CSRs using keys stored in
 /// Hardware Security Modules or other secure key providers.
-#[cfg(feature = "csr-gen")]
+#[cfg(all(feature = "csr-gen", feature = "hsm"))]
 mod hsm_csr {
     use crate::error::{EstError, Result};
     use crate::hsm::{KeyHandle, KeyProvider, SoftwareKeyProvider};
@@ -573,7 +573,7 @@ mod hsm_csr {
 #[cfg(feature = "csr-gen")]
 pub use builder::*;
 
-#[cfg(feature = "csr-gen")]
+#[cfg(all(feature = "csr-gen", feature = "hsm"))]
 pub use hsm_csr::*;
 
 #[cfg(not(feature = "csr-gen"))]
@@ -619,7 +619,7 @@ mod tests {
     }
 }
 
-#[cfg(all(test, feature = "csr-gen"))]
+#[cfg(all(test, feature = "csr-gen", feature = "hsm"))]
 mod hsm_tests {
     use super::*;
     use crate::hsm::{KeyAlgorithm, KeyProvider, SoftwareKeyProvider};
@@ -697,7 +697,9 @@ mod hsm_tests {
             .locality("San Francisco")
             .san_dns("full-test.example.com")
             .san_dns("alt.example.com")
-            .san_ip(std::net::IpAddr::V4(std::net::Ipv4Addr::new(192, 168, 1, 1)))
+            .san_ip(std::net::IpAddr::V4(std::net::Ipv4Addr::new(
+                192, 168, 1, 1,
+            )))
             .san_email("admin@example.com")
             .san_uri("https://example.com")
             .key_usage_digital_signature()

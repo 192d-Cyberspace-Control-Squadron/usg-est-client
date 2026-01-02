@@ -1,0 +1,76 @@
+# EST Auto-Enrollment Configuration
+# Web server certificate with multiple SANs and TPM key protection
+#
+# This configuration is for servers that require TLS certificates
+# with multiple DNS names and IP addresses.
+
+[server]
+url = "https://est.example.com"
+ca_label = "servers"
+timeout_seconds = 180
+
+[trust]
+mode = "explicit"
+ca_bundle_path = "/etc/est/ca-bundle.pem"
+
+[authentication]
+# Use existing certificate for authentication (re-enrollment)
+method = "client_cert"
+cert_path = "/etc/est/current-cert.pem"
+key_path = "/etc/est/current-key.pem"
+
+[certificate]
+common_name = "webserver.example.com"
+organization = "Example Corporation"
+organizational_unit = "Web Services"
+country = "US"
+state = "Virginia"
+locality = "Arlington"
+
+[certificate.san]
+# Multiple DNS names for virtual hosts
+dns = [
+    "webserver.example.com",
+    "www.example.com",
+    "api.example.com",
+    "admin.example.com",
+    "*.internal.example.com"
+]
+# Specific IP addresses for direct access
+ip = ["10.0.1.100", "192.168.1.100"]
+
+[certificate.key]
+# RSA 2048 for broader compatibility
+algorithm = "rsa-2048"
+
+# Use TPM for hardware key protection (if available)
+provider = "tpm"
+non_exportable = true
+
+# Request TPM attestation (server must support this)
+attestation = true
+
+[certificate.extensions]
+key_usage = ["digital_signature", "key_encipherment"]
+extended_key_usage = ["server_auth", "client_auth"]
+
+[renewal]
+enabled = true
+# Servers should renew earlier to avoid service disruption
+threshold_days = 60
+check_interval_hours = 12
+max_retries = 10
+retry_delay_minutes = 60
+
+[storage]
+cert_path = "/etc/ssl/certs/webserver.pem"
+key_path = "/etc/ssl/private/webserver.key"
+chain_path = "/etc/ssl/certs/webserver-chain.pem"
+archive_old = true
+
+[logging]
+level = "info"
+path = "/var/log/est/server-enrollment.log"
+json_format = true
+max_size_mb = 50
+max_files = 10

@@ -50,7 +50,9 @@ tracing = "0.1.44"
 # Configuration file parsing (optional, for auto-enrollment)
 toml = { version = "0.8", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
+serde_json = { version = "1.0", optional = true }
 dirs = { version = "5.0", optional = true }
+hostname = { version = "0.4", optional = true }
 
 # Date/time handling (optional, for renewal feature)
 time = { version = "0.3", optional = true, features = ["formatting", "parsing", "macros"] }
@@ -75,6 +77,7 @@ des = { version = "0.8", optional = true }
 tokio = { version = "1.47", features = ["rt-multi-thread", "macros"] }
 tracing-subscriber = "0.3.22"
 wiremock = "0.6.5"
+tempfile = "3.15"
 
 [[bin]]
 name = "generate_fixtures"
@@ -92,4 +95,4 @@ metrics = []
 metrics-prometheus = ["metrics", "prometheus", "opentelemetry", "opentelemetry-prometheus", "opentelemetry_sdk"]
 revocation = []
 enveloped = ["aes", "cbc", "des"]
-auto-enroll = ["toml", "serde", "dirs", "renewal", "csr-gen"]
+auto-enroll = ["toml", "serde", "serde_json", "dirs", "hostname", "renewal", "csr-gen"]

@@ -1,0 +1,81 @@
+# EST Auto-Enrollment Configuration
+# Domain workstation with Windows certificate store integration
+#
+# This configuration is designed for Windows domain workstations.
+# It uses the Windows certificate store and supports automatic renewal.
+#
+# Place this file at: C:\ProgramData\EST\config.toml
+
+[server]
+url = "https://est.contoso.com"
+ca_label = "workstations"
+timeout_seconds = 120
+
+# Enable TLS channel binding for enhanced security
+channel_binding = true
+
+[trust]
+mode = "explicit"
+ca_bundle_path = "C:\\ProgramData\\EST\\contoso-ca.pem"
+
+[authentication]
+# Use client certificate for re-enrollment (initial enrollment uses HTTP Basic)
+method = "auto"
+
+# For initial enrollment
+username = "${COMPUTERNAME}$"
+password_source = "credential_manager"
+
+# For re-enrollment, use the existing certificate
+cert_store = "LocalMachine\\My"
+cert_thumbprint = "auto"
+
+[certificate]
+common_name = "${COMPUTERNAME}.${USERDNSDOMAIN}"
+organization = "Contoso Ltd"
+organizational_unit = "Workstations"
+country = "US"
+state = "Washington"
+locality = "Redmond"
+
+[certificate.san]
+dns = [
+    "${COMPUTERNAME}.${USERDNSDOMAIN}",
+    "${COMPUTERNAME}.contoso.com",
+    "${COMPUTERNAME}"
+]
+# Automatically include local IP addresses
+include_ip = true
+
+[certificate.key]
+algorithm = "ecdsa-p256"
+provider = "cng"
+non_exportable = true
+
+[certificate.extensions]
+key_usage = ["digital_signature", "key_encipherment"]
+extended_key_usage = ["client_auth", "smart_card_logon"]
+
+[renewal]
+enabled = true
+threshold_days = 45
+check_interval_hours = 4
+max_retries = 10
+retry_delay_minutes = 15
+
+[storage]
+# Store in Windows certificate store
+windows_store = "LocalMachine\\My"
+friendly_name = "Contoso Workstation Certificate"
+archive_old = true
+
+[logging]
+level = "info"
+path = "C:\\ProgramData\\EST\\logs\\est-enroll.log"
+windows_event_log = true
+max_size_mb = 10
+max_files = 5
+
+[service]
+start_type = "automatic"
+dependencies = ["Tcpip", "Dnscache"]

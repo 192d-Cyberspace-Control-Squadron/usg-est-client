@@ -288,7 +288,12 @@ fn extract_version(data: &[u8]) -> Result<u8> {
 }
 
 /// Extracted components from an EnvelopedData structure.
-type EnvelopedComponents = (Vec<RecipientInfo>, EncryptionAlgorithm, Vec<u8>, Option<Vec<u8>>);
+type EnvelopedComponents = (
+    Vec<RecipientInfo>,
+    EncryptionAlgorithm,
+    Vec<u8>,
+    Option<Vec<u8>>,
+);
 
 /// Extract components from EnvelopedData.
 fn extract_enveloped_components(data: &[u8]) -> Result<EnvelopedComponents> {
@@ -421,7 +426,9 @@ fn parse_encrypted_content_info(
 }
 
 /// Parse ContentEncryptionAlgorithm and extract IV.
-fn parse_content_encryption_algorithm(data: &[u8]) -> Result<(EncryptionAlgorithm, Option<Vec<u8>>)> {
+fn parse_content_encryption_algorithm(
+    data: &[u8],
+) -> Result<(EncryptionAlgorithm, Option<Vec<u8>>)> {
     let (_, content) = skip_tlv_header(data)?;
 
     // OID
@@ -456,7 +463,8 @@ fn extract_algorithm_name(data: &[u8]) -> String {
     }
 
     // Check for common RSA key encryption OID
-    if content.len() >= 9 && content[2..11] == [0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01]
+    if content.len() >= 9
+        && content[2..11] == [0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x01, 0x01]
     {
         return "RSA".to_string();
     }

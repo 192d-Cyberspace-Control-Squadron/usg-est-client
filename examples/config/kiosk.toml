@@ -1,0 +1,41 @@
+# EST Auto-Enrollment Configuration
+# Minimal configuration for kiosk or embedded devices
+#
+# This is a stripped-down configuration for resource-constrained
+# devices that need basic certificate enrollment.
+
+[server]
+url = "https://est.example.com"
+timeout_seconds = 30
+
+[trust]
+# Use system root certificates (simpler deployment)
+mode = "webpki"
+
+[authentication]
+method = "http_basic"
+username = "${COMPUTERNAME}"
+password_source = "env:EST_PASSWORD"
+
+[certificate]
+common_name = "${COMPUTERNAME}"
+
+[certificate.key]
+algorithm = "ecdsa-p256"
+provider = "software"
+
+[certificate.extensions]
+key_usage = ["digital_signature"]
+extended_key_usage = ["client_auth"]
+
+[renewal]
+enabled = true
+threshold_days = 14
+check_interval_hours = 24
+
+[storage]
+cert_path = "/var/lib/est/device.pem"
+key_path = "/var/lib/est/device.key"
+
+[logging]
+level = "warn"

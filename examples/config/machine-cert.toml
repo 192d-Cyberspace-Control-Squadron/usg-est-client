@@ -1,0 +1,68 @@
+# EST Auto-Enrollment Configuration
+# Basic machine certificate enrollment
+#
+# This is a minimal configuration for enrolling a machine certificate.
+# Place this file at:
+#   Windows: C:\ProgramData\EST\config.toml
+#   Linux:   /etc/est/config.toml
+#   macOS:   /etc/est/config.toml
+
+[server]
+# EST server URL (required)
+url = "https://est.example.com"
+
+# Request timeout in seconds
+timeout_seconds = 60
+
+[trust]
+# Trust mode: "webpki", "explicit", "bootstrap", or "insecure"
+# For production, use "explicit" with your organization's CA bundle
+mode = "explicit"
+ca_bundle_path = "/etc/est/ca-bundle.pem"
+
+[authentication]
+# Use HTTP Basic authentication for initial enrollment
+method = "http_basic"
+
+# Machine name as username (auto-expanded)
+username = "${COMPUTERNAME}"
+
+# Password from environment variable
+# Set EST_PASSWORD before running the enrollment
+password_source = "env:EST_PASSWORD"
+
+[certificate]
+# Certificate subject - uses variable expansion
+common_name = "${COMPUTERNAME}.${USERDNSDOMAIN}"
+organization = "Example Corporation"
+
+[certificate.san]
+# Subject Alternative Names
+dns = ["${COMPUTERNAME}.${USERDNSDOMAIN}", "${COMPUTERNAME}"]
+
+[certificate.key]
+# Use ECDSA P-256 (recommended for most use cases)
+algorithm = "ecdsa-p256"
+provider = "software"
+
+[certificate.extensions]
+key_usage = ["digital_signature", "key_encipherment"]
+extended_key_usage = ["client_auth"]
+
+[renewal]
+# Enable automatic renewal
+enabled = true
+
+# Renew 30 days before expiration
+threshold_days = 30
+
+# Check every 6 hours
+check_interval_hours = 6
+
+[storage]
+# Store certificate in PEM files
+cert_path = "/etc/est/machine.pem"
+key_path = "/etc/est/machine.key"
+
+[logging]
+level = "info"
