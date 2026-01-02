@@ -31,3 +31,6 @@ mod tls;
 
 #[path = "integration/errors/mod.rs"]
 mod errors;
+
+#[path = "integration/metrics_test.rs"]
+mod metrics_test;

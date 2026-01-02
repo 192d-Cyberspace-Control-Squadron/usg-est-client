@@ -85,7 +85,7 @@ use cryptoki::object::{Attribute, AttributeType, ObjectClass, ObjectHandle};
 use cryptoki::session::{Session, UserType};
 use cryptoki::slot::Slot;
 use cryptoki::types::AuthPin;
-use der::{asn1::BitString, Encode};
+use der::{Decode, Encode, asn1::BitString};
 use spki::{AlgorithmIdentifierOwned, ObjectIdentifier, SubjectPublicKeyInfoOwned};
 use std::collections::HashMap;
 use std::path::Path;
@@ -152,11 +152,7 @@ impl Pkcs11KeyProvider {
     /// # Ok(())
     /// # }
     /// ```
-    pub fn new<P: AsRef<Path>>(
-        library_path: P,
-        slot_id: Option<usize>,
-        pin: &str,
-    ) -> Result<Self> {
+    pub fn new<P: AsRef<Path>>(library_path: P, slot_id: Option<usize>, pin: &str) -> Result<Self> {
         // Initialize PKCS#11 library
         let pkcs11 = Pkcs11::new(library_path.as_ref()).map_err(|e| {
             EstError::hsm(format!(
@@ -166,9 +162,9 @@ impl Pkcs11KeyProvider {
             ))
         })?;
 
-        pkcs11.initialize(CInitializeArgs::OsThreads).map_err(|e| {
-            EstError::hsm(format!("Failed to initialize PKCS#11 library: {}", e))
-        })?;
+        pkcs11
+            .initialize(CInitializeArgs::OsThreads)
+            .map_err(|e| EstError::hsm(format!("Failed to initialize PKCS#11 library: {}", e)))?;
 
         // Get library info for provider metadata
         let lib_info = pkcs11
@@ -182,9 +178,10 @@ impl Pkcs11KeyProvider {
                 .get_slots_with_token()
                 .map_err(|e| EstError::hsm(format!("Failed to get slots: {}", e)))?;
 
-            slots.into_iter().find(|s| s.id() == id).ok_or_else(|| {
-                EstError::hsm(format!("Slot {} not found or has no token", id))
-            })?
+            slots
+                .into_iter()
+                .find(|s| s.id() == id as u64)
+                .ok_or_else(|| EstError::hsm(format!("Slot {} not found or has no token", id)))?
         } else {
             // Use first available slot with a token
             let slots = pkcs11
@@ -217,16 +214,15 @@ impl Pkcs11KeyProvider {
         let info = ProviderInfo {
             name: format!(
                 "{} ({})",
-                String::from_utf8_lossy(&token_info.label()).trim(),
-                String::from_utf8_lossy(&lib_info.library_description).trim()
+                token_info.label().trim(),
+                lib_info.library_description().trim()
             ),
             version: format!(
                 "{}.{}",
-                lib_info.cryptoki_version.major, lib_info.cryptoki_version.minor
+                lib_info.cryptoki_version().major(),
+                lib_info.cryptoki_version().minor()
             ),
-            manufacturer: String::from_utf8_lossy(&token_info.manufacturer_id())
-                .trim()
-                .to_string(),
+            manufacturer: token_info.manufacturer_id().trim().to_string(),
             supports_key_generation: true,
             supports_key_deletion: true,
         };
@@ -334,7 +330,10 @@ impl Pkcs11KeyProvider {
     }
 
     /// Extract RSA public key from a PKCS#11 public key object.
-    fn extract_rsa_public_key(&self, pub_handle: ObjectHandle) -> Result<SubjectPublicKeyInfoOwned> {
+    fn extract_rsa_public_key(
+        &self,
+        pub_handle: ObjectHandle,
+    ) -> Result<SubjectPublicKeyInfoOwned> {
         let session = self.session.lock().unwrap();
 
         // Get RSA modulus and public exponent
@@ -352,11 +351,14 @@ impl Pkcs11KeyProvider {
 
         let public_exponent = match &attrs[1] {
             Attribute::PublicExponent(e) => e.clone(),
-            _ => return Err(EstError::hsm("Invalid public exponent attribute".to_string())),
+            _ => {
+                return Err(EstError::hsm(
+                    "Invalid public exponent attribute".to_string(),
+                ));
+            }
         };
 
         // Build RSA public key structure
-        use der::Encode as _;
 
         // RSA public key is SEQUENCE { modulus INTEGER, publicExponent INTEGER }
         let mut rsa_pubkey = Vec::new();
@@ -497,11 +499,7 @@ impl Pkcs11KeyProvider {
         attributes.insert("key_id".to_string(), key_id);
 
         Ok(KeyMetadata {
-            label: if label.is_empty() {
-                None
-            } else {
-                Some(label)
-            },
+            label: if label.is_empty() { None } else { Some(label) },
             can_sign,
             extractable,
             attributes,
@@ -580,8 +578,7 @@ impl KeyProvider for Pkcs11KeyProvider {
                 )
             }
             KeyAlgorithm::Rsa { bits } => {
-                let modulus_bits = cryptoki::types::Ulong::try_from(bits)
-                    .map_err(|e| EstError::hsm(format!("Invalid RSA key size: {}", e)))?;
+                let modulus_bits = cryptoki::types::Ulong::from(bits as u64);
 
                 (
                     Mechanism::RsaPkcsKeyPairGen,
@@ -679,7 +676,11 @@ impl KeyProvider for Pkcs11KeyProvider {
             let attrs = session
                 .get_attributes(
                     handle,
-                    &[AttributeType::KeyType, AttributeType::Id, AttributeType::EcParams],
+                    &[
+                        AttributeType::KeyType,
+                        AttributeType::Id,
+                        AttributeType::EcParams,
+                    ],
                 )
                 .map_err(|e| EstError::hsm(format!("Failed to get key attributes: {}", e)))?;
 
@@ -693,12 +694,12 @@ impl KeyProvider for Pkcs11KeyProvider {
                 _ => continue,
             };
 
-            let algorithm = match key_type {
+            let algorithm = match *key_type {
                 cryptoki::object::KeyType::EC => {
                     // Determine curve from EC_PARAMS
                     if let Attribute::EcParams(params) = &attrs[2] {
                         // Parse OID from params
-                        if let Ok(oid) = ObjectIdentifier::from_der(params) {
+                        if let Ok(oid) = ObjectIdentifier::from_bytes(params) {
                             if oid == SECP_256_R_1 {
                                 KeyAlgorithm::EcdsaP256
                             } else if oid == SECP_384_R_1 {
@@ -735,7 +736,11 @@ impl KeyProvider for Pkcs11KeyProvider {
             let attrs = session
                 .get_attributes(
                     handle,
-                    &[AttributeType::KeyType, AttributeType::Id, AttributeType::EcParams],
+                    &[
+                        AttributeType::KeyType,
+                        AttributeType::Id,
+                        AttributeType::EcParams,
+                    ],
                 )
                 .map_err(|e| EstError::hsm(format!("Failed to get key attributes: {}", e)))?;
 
@@ -749,10 +754,10 @@ impl KeyProvider for Pkcs11KeyProvider {
                 _ => return Ok(None),
             };
 
-            let algorithm = match key_type {
+            let algorithm = match *key_type {
                 cryptoki::object::KeyType::EC => {
                     if let Attribute::EcParams(params) = &attrs[2] {
-                        if let Ok(oid) = ObjectIdentifier::from_der(params) {
+                        if let Ok(oid) = ObjectIdentifier::from_bytes(params) {
                             if oid == SECP_256_R_1 {
                                 KeyAlgorithm::EcdsaP256
                             } else if oid == SECP_384_R_1 {

@@ -95,97 +95,99 @@ impl PrometheusExporter {
         let operations_total = CounterVec::new(
             Opts::new(
                 format!("{}_operations_total", namespace),
-                "Total number of EST operations by type"
+                "Total number of EST operations by type",
             ),
-            &["operation"]
+            &["operation"],
         )?;
 
         let operations_success = CounterVec::new(
             Opts::new(
                 format!("{}_operations_success_total", namespace),
-                "Total number of successful EST operations by type"
+                "Total number of successful EST operations by type",
             ),
-            &["operation"]
+            &["operation"],
         )?;
 
         let operations_failed = CounterVec::new(
             Opts::new(
                 format!("{}_operations_failed_total", namespace),
-                "Total number of failed EST operations by type"
+                "Total number of failed EST operations by type",
             ),
-            &["operation"]
+            &["operation"],
         )?;
 
         // Operation duration histogram
         let operation_duration_seconds = HistogramVec::new(
             HistogramOpts::new(
                 format!("{}_operation_duration_seconds", namespace),
-                "EST operation duration in seconds"
+                "EST operation duration in seconds",
             )
-            .buckets(vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]),
-            &["operation"]
+            .buckets(vec![
+                0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
+            ]),
+            &["operation"],
         )?;
 
         // Operation duration gauges
         let operation_duration_min_seconds = GaugeVec::new(
             Opts::new(
                 format!("{}_operation_duration_min_seconds", namespace),
-                "Minimum EST operation duration in seconds by type"
+                "Minimum EST operation duration in seconds by type",
             ),
-            &["operation"]
+            &["operation"],
         )?;
 
         let operation_duration_max_seconds = GaugeVec::new(
             Opts::new(
                 format!("{}_operation_duration_max_seconds", namespace),
-                "Maximum EST operation duration in seconds by type"
+                "Maximum EST operation duration in seconds by type",
             ),
-            &["operation"]
+            &["operation"],
         )?;
 
         let operation_duration_avg_seconds = GaugeVec::new(
             Opts::new(
                 format!("{}_operation_duration_avg_seconds", namespace),
-                "Average EST operation duration in seconds by type"
+                "Average EST operation duration in seconds by type",
             ),
-            &["operation"]
+            &["operation"],
         )?;
 
         let operation_success_rate = GaugeVec::new(
             Opts::new(
                 format!("{}_operation_success_rate", namespace),
-                "EST operation success rate (0-100) by type"
+                "EST operation success rate (0-100) by type",
             ),
-            &["operation"]
+            &["operation"],
         )?;
 
         // TLS metrics
         let tls_handshakes_total = Counter::with_opts(Opts::new(
             format!("{}_tls_handshakes_total", namespace),
-            "Total number of TLS handshakes"
+            "Total number of TLS handshakes",
         ))?;
 
         let tls_handshakes_success = Counter::with_opts(Opts::new(
             format!("{}_tls_handshakes_success_total", namespace),
-            "Total number of successful TLS handshakes"
+            "Total number of successful TLS handshakes",
         ))?;
 
         let tls_handshakes_failed = Counter::with_opts(Opts::new(
             format!("{}_tls_handshakes_failed_total", namespace),
-            "Total number of failed TLS handshakes"
+            "Total number of failed TLS handshakes",
         ))?;
 
         let tls_handshake_duration_seconds = Histogram::with_opts(
             HistogramOpts::new(
                 format!("{}_tls_handshake_duration_seconds", namespace),
-                "TLS handshake duration in seconds"
+                "TLS handshake duration in seconds",
             )
-            .buckets(vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0])
+            .buckets(vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0]),
         )?;
 
         let tls_handshake_success_rate = Gauge::with_opts(Opts::new(
             format!("{}_tls_handshake_success_rate", namespace),
-            "TLS handshake success rate (0-100)"
+            "TLS handshake success rate (0-100)",
         ))?;
 
         // Register all metrics
@@ -255,7 +257,8 @@ impl PrometheusExporter {
         // Update TLS metrics
         // Reset counters to current values (Prometheus doesn't support setting counters directly)
         // In practice, these would be incremented as operations occur
-        self.tls_handshake_success_rate.set(summary.tls.success_rate());
+        self.tls_handshake_success_rate
+            .set(summary.tls.success_rate());
 
         Ok(())
     }

@@ -70,9 +70,7 @@ async fn main() {
         println!();
 
         // Create EST client configuration
-        let config = match EstClientConfig::builder()
-            .server_url(server_url)
-        {
+        let config = match EstClientConfig::builder().server_url(server_url) {
             Ok(builder) => match builder.trust_any_insecure().build() {
                 Ok(cfg) => cfg,
                 Err(e) => {
@@ -164,7 +162,9 @@ async fn main() {
         println!("      fn on_event(&self, event: &RenewalEvent) {{");
         println!("          match event {{");
         println!("              RenewalEvent::CheckStarted => {{ /* ... */ }}");
-        println!("              RenewalEvent::RenewalSucceeded {{ certificate }} => {{ /* ... */ }}");
+        println!(
+            "              RenewalEvent::RenewalSucceeded {{ certificate }} => {{ /* ... */ }}"
+        );
         println!("              // ... handle other events");
         println!("          }}");
         println!("      }}");

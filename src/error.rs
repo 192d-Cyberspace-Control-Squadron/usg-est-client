@@ -138,6 +138,12 @@ impl EstError {
         Self::Csr(msg.into())
     }
 
+    /// Create an HSM error with the given message (reuses CSR error type).
+    #[cfg(feature = "hsm")]
+    pub fn hsm(msg: impl Into<String>) -> Self {
+        Self::Csr(msg.into())
+    }
+
     /// Create a server error with status and message.
     pub fn server_error(status: u16, message: impl Into<String>) -> Self {
         Self::ServerError {

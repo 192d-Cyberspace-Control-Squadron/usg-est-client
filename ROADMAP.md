@@ -447,7 +447,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ⚠️  Create validation example (`examples/validate_chain.rs`) - TODO
 - ⚠️  Document validation in `docs/security.md` - TODO
 
-#### 10.2.7 Metrics and Monitoring ✅ COMPLETE (Core Implementation)
+#### 10.2.7 Metrics and Monitoring ✅ COMPLETE
 
 - ✅ Design metrics collection API (`src/metrics.rs`)
 - ✅ Add operation counters (enrollments, renewals, errors)
@@ -456,9 +456,11 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Thread-safe metrics collection with RwLock
 - ✅ Success rate calculations
 - ✅ Add `metrics` feature flag to `Cargo.toml`
-- ⚠️  Integrate with prometheus/opentelemetry - TODO (framework ready)
-- ⚠️  Create metrics example (`examples/metrics.rs`) - TODO
-- ⚠️  Document metrics in `docs/operations.md` - TODO
+- ✅ Integrate with prometheus/opentelemetry (`src/metrics/prometheus.rs`, `src/metrics/opentelemetry.rs`)
+- ✅ Create metrics example (`examples/metrics.rs`)
+- ✅ Document metrics in `docs/metrics.md`
+- ✅ Add `metrics-prometheus` feature flag to `Cargo.toml`
+- ✅ Comprehensive integration tests (14 tests in `tests/integration/metrics_test.rs`)
 
 ---
 

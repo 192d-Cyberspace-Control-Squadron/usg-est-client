@@ -15,7 +15,7 @@
 //! ```
 
 use std::time::{Duration, Instant};
-use usg_est_client::metrics::{format_metrics_summary, MetricsCollector, OperationType};
+use usg_est_client::metrics::{MetricsCollector, OperationType, format_metrics_summary};
 
 #[cfg(feature = "metrics-prometheus")]
 use usg_est_client::metrics::prometheus::PrometheusExporter;
@@ -188,8 +188,5 @@ async fn simulate_operation(name: &str, iteration: u64, success: bool) {
     tokio::time::sleep(Duration::from_millis(duration_ms)).await;
 
     let status = if success { "✓" } else { "✗" };
-    println!(
-        "{} {} #{}: {}ms",
-        status, name, iteration, duration_ms
-    );
+    println!("{} {} #{}: {}ms", status, name, iteration, duration_ms);
 }

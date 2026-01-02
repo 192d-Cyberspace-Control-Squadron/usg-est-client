@@ -181,7 +181,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "rsa-3072" => KeyAlgorithm::Rsa { bits: 3072 },
         "rsa-4096" => KeyAlgorithm::Rsa { bits: 4096 },
         _ => {
-            error!("❌ Invalid algorithm. Use: ecdsa-p256, ecdsa-p384, rsa-2048, rsa-3072, or rsa-4096");
+            error!(
+                "❌ Invalid algorithm. Use: ecdsa-p256, ecdsa-p384, rsa-2048, rsa-3072, or rsa-4096"
+            );
             return Err("Invalid algorithm".into());
         }
     };
@@ -206,10 +208,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("🔍 Checking for existing key '{}'...", args.key_label);
     let key_handle = if let Some(existing_key) = provider.find_key(&args.key_label).await? {
         info!("✅ Found existing key");
-        info!(
-            "   Algorithm: {}",
-            existing_key.algorithm().as_str()
-        );
+        info!("   Algorithm: {}", existing_key.algorithm().as_str());
         existing_key
     } else {
         info!("🔑 Generating new key pair in HSM...");
@@ -248,7 +247,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .build()?;
 
     info!("✅ CSR generated");
-    info!("   Subject: CN={}, O={}", args.common_name, args.organization);
+    info!(
+        "   Subject: CN={}, O={}",
+        args.common_name, args.organization
+    );
     info!("");
     info!("💡 Note: This example uses a software-generated CSR.");
     info!("   For production HSM use, implement custom CSR signing with the HSM key.");
@@ -298,14 +300,21 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             info!("");
             info!("💡 To list all keys in the HSM:");
             info!("   cargo run --example list_hsm_keys --features pkcs11 -- \\");
-            info!("       --library {} --pin {}", args.library.display(), args.pin);
+            info!(
+                "       --library {} --pin {}",
+                args.library.display(),
+                args.pin
+            );
         }
         EnrollmentResponse::Pending { retry_after } => {
             info!("⏳ Enrollment pending");
             info!("   Retry after: {} seconds", retry_after);
             info!("");
             info!("   The CA requires manual approval or additional processing.");
-            info!("   Re-run this command after {} seconds to check status.", retry_after);
+            info!(
+                "   Re-run this command after {} seconds to check status.",
+                retry_after
+            );
         }
     }
 

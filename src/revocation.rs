@@ -55,10 +55,10 @@ use std::sync::Arc;
 use std::time::{Duration, SystemTime};
 use tokio::sync::RwLock;
 use tracing::{debug, info, warn};
+use x509_cert::Certificate;
 use x509_cert::crl::CertificateList;
 use x509_cert::ext::pkix::crl::dp::DistributionPoint;
 use x509_cert::ext::pkix::{AuthorityInfoAccessSyntax, CrlDistributionPoints};
-use x509_cert::Certificate;
 
 /// Configuration for revocation checking.
 #[derive(Debug, Clone)]
@@ -460,7 +460,11 @@ impl RevocationChecker {
     }
 
     /// Check if certificate is revoked in CRL.
-    fn check_cert_in_crl(&self, cert: &Certificate, crl: &CertificateList) -> Result<RevocationStatus> {
+    fn check_cert_in_crl(
+        &self,
+        cert: &Certificate,
+        crl: &CertificateList,
+    ) -> Result<RevocationStatus> {
         let cert_serial = &cert.tbs_certificate.serial_number;
 
         // Check if there are any revoked certificates
@@ -564,7 +568,10 @@ impl RevocationChecker {
                 x509_cert::ext::pkix::name::DistributionPointName::FullName(general_names) => {
                     for general_name in general_names.iter() {
                         // UniformResourceIdentifier is variant 6
-                        if let x509_cert::ext::pkix::name::GeneralName::UniformResourceIdentifier(uri) = general_name {
+                        if let x509_cert::ext::pkix::name::GeneralName::UniformResourceIdentifier(
+                            uri,
+                        ) = general_name
+                        {
                             if let Ok(url) = std::str::from_utf8(uri.as_bytes()) {
                                 debug!("Found CRL URL: {}", url);
                                 urls.push(url.to_string());
@@ -578,11 +585,7 @@ impl RevocationChecker {
             }
         }
 
-        if urls.is_empty() {
-            None
-        } else {
-            Some(urls)
-        }
+        if urls.is_empty() { None } else { Some(urls) }
     }
 
     /// Check CRL cache for revocation status.

@@ -42,7 +42,7 @@ use std::env;
 #[cfg(all(feature = "hsm", feature = "csr-gen"))]
 use usg_est_client::hsm::{KeyAlgorithm, KeyProvider, SoftwareKeyProvider};
 #[cfg(all(feature = "hsm", feature = "csr-gen"))]
-use usg_est_client::{csr::CsrBuilder, EnrollmentResponse, EstClient, EstClientConfig};
+use usg_est_client::{EnrollmentResponse, EstClient, EstClientConfig, csr::CsrBuilder};
 
 #[tokio::main]
 async fn main() {
@@ -138,10 +138,7 @@ async fn demonstrate_key_provider() {
     println!();
 
     // List all keys in the provider
-    let keys = provider
-        .list_keys()
-        .await
-        .expect("Failed to list keys");
+    let keys = provider.list_keys().await.expect("Failed to list keys");
 
     println!("Keys in HSM: {}", keys.len());
     for (i, key) in keys.iter().enumerate() {
@@ -214,9 +211,7 @@ async fn perform_live_enrollment(server_url: &str) {
     println!();
 
     // Create EST client
-    let config = match EstClientConfig::builder()
-        .server_url(server_url)
-    {
+    let config = match EstClientConfig::builder().server_url(server_url) {
         Ok(builder) => match builder.trust_any_insecure().build() {
             Ok(cfg) => cfg,
             Err(e) => {

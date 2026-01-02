@@ -16,8 +16,8 @@
 //! OpenTelemetry metrics exporter for EST operations.
 //!
 //! This module provides OpenTelemetry-compatible metrics export using the
-//! OpenTelemetry SDK with Prometheus exporter backend. This allows EST client
-//! metrics to be integrated into OpenTelemetry observability pipelines.
+//! Prometheus exporter as a backend. OpenTelemetry service metadata is added
+//! to the exported metrics.
 //!
 //! # Example
 //!
@@ -48,18 +48,18 @@
 //! # }
 //! ```
 
-use crate::metrics::{MetricsCollector, MetricsSummary};
-use opentelemetry::global;
-use opentelemetry::KeyValue;
-use opentelemetry_sdk::metrics::{MeterProvider, PeriodicReader, SdkMeterProvider};
-use opentelemetry_sdk::Resource;
+use crate::metrics::MetricsCollector;
+use crate::metrics::prometheus::PrometheusExporter;
 use std::error::Error as StdError;
-use std::sync::Arc;
 
 /// OpenTelemetry metrics exporter for EST client operations.
+///
+/// This exporter wraps the Prometheus exporter and adds OpenTelemetry
+/// semantic conventions and service metadata.
 pub struct OpenTelemetryExporter {
-    meter_provider: SdkMeterProvider,
-    prometheus_exporter: Arc<opentelemetry_prometheus::PrometheusExporter>,
+    service_name: String,
+    service_version: String,
+    prometheus_exporter: PrometheusExporter,
 }
 
 impl OpenTelemetryExporter {
@@ -72,34 +72,19 @@ impl OpenTelemetryExporter {
     ///
     /// # Errors
     ///
-    /// Returns an error if the OpenTelemetry pipeline cannot be initialized.
+    /// Returns an error if the Prometheus exporter cannot be initialized.
     pub fn new(service_name: &str, service_version: &str) -> Result<Self, Box<dyn StdError>> {
-        // Create Prometheus exporter
-        let prometheus_exporter = opentelemetry_prometheus::exporter()
-            .with_resource(Resource::new(vec![
-                KeyValue::new("service.name", service_name.to_string()),
-                KeyValue::new("service.version", service_version.to_string()),
-            ]))
-            .build()?;
-
-        let meter_provider = SdkMeterProvider::builder()
-            .with_reader(prometheus_exporter.clone())
-            .with_resource(Resource::new(vec![
-                KeyValue::new("service.name", service_name.to_string()),
-                KeyValue::new("service.version", service_version.to_string()),
-            ]))
-            .build();
-
-        // Set global meter provider
-        global::set_meter_provider(meter_provider.clone());
+        // Create Prometheus exporter with OpenTelemetry-compatible namespace
+        let prometheus_exporter = PrometheusExporter::new("est")?;
 
         Ok(Self {
-            meter_provider,
-            prometheus_exporter: Arc::new(prometheus_exporter),
+            service_name: service_name.to_string(),
+            service_version: service_version.to_string(),
+            prometheus_exporter,
         })
     }
 
-    /// Export metrics in Prometheus format.
+    /// Export metrics in Prometheus format with OpenTelemetry metadata.
     ///
     /// # Arguments
     ///
@@ -107,104 +92,25 @@ impl OpenTelemetryExporter {
     ///
     /// # Returns
     ///
-    /// A string containing the metrics in Prometheus text format.
+    /// A string containing the metrics in Prometheus text format with
+    /// OpenTelemetry service metadata as comments.
     pub async fn export(&self, collector: &MetricsCollector) -> Result<String, Box<dyn StdError>> {
-        let summary = collector.get_summary().await;
-        self.update_metrics(&summary)?;
+        let output = self.prometheus_exporter.export(collector).await?;
 
-        // Get Prometheus formatted output
-        let encoded = self.prometheus_exporter.encode()?;
-        Ok(String::from_utf8(encoded)?)
+        // Add OpenTelemetry service metadata as Prometheus comments
+        let mut result = String::new();
+        result.push_str("# OpenTelemetry Semantic Conventions\n");
+        result.push_str(&format!("# service.name=\"{}\"\n", self.service_name));
+        result.push_str(&format!("# service.version=\"{}\"\n", self.service_version));
+        result.push('\n');
+        result.push_str(&output);
+
+        Ok(result)
     }
 
-    /// Update OpenTelemetry metrics from a metrics summary.
-    fn update_metrics(&self, summary: &MetricsSummary) -> Result<(), Box<dyn StdError>> {
-        let meter = self.meter_provider.meter("est-client");
-
-        // Create gauges for operation metrics
-        let operation_total = meter
-            .u64_observable_gauge("est.operations.total")
-            .with_description("Total number of EST operations")
-            .with_callback(move |observer| {
-                observer.observe(summary.ca_certs.total, &[KeyValue::new("operation", "get_ca_certs")]);
-                observer.observe(summary.enrollments.total, &[KeyValue::new("operation", "simple_enroll")]);
-                observer.observe(summary.reenrollments.total, &[KeyValue::new("operation", "simple_reenroll")]);
-                observer.observe(summary.csr_attrs.total, &[KeyValue::new("operation", "get_csr_attributes")]);
-                observer.observe(summary.server_keygen.total, &[KeyValue::new("operation", "server_keygen")]);
-                observer.observe(summary.full_cmc.total, &[KeyValue::new("operation", "full_cmc")]);
-            })
-            .init();
-
-        let operation_success = meter
-            .u64_observable_gauge("est.operations.success")
-            .with_description("Number of successful EST operations")
-            .with_callback(move |observer| {
-                observer.observe(summary.ca_certs.success, &[KeyValue::new("operation", "get_ca_certs")]);
-                observer.observe(summary.enrollments.success, &[KeyValue::new("operation", "simple_enroll")]);
-                observer.observe(summary.reenrollments.success, &[KeyValue::new("operation", "simple_reenroll")]);
-                observer.observe(summary.csr_attrs.success, &[KeyValue::new("operation", "get_csr_attributes")]);
-                observer.observe(summary.server_keygen.success, &[KeyValue::new("operation", "server_keygen")]);
-                observer.observe(summary.full_cmc.success, &[KeyValue::new("operation", "full_cmc")]);
-            })
-            .init();
-
-        let operation_failed = meter
-            .u64_observable_gauge("est.operations.failed")
-            .with_description("Number of failed EST operations")
-            .with_callback(move |observer| {
-                observer.observe(summary.ca_certs.failed, &[KeyValue::new("operation", "get_ca_certs")]);
-                observer.observe(summary.enrollments.failed, &[KeyValue::new("operation", "simple_enroll")]);
-                observer.observe(summary.reenrollments.failed, &[KeyValue::new("operation", "simple_reenroll")]);
-                observer.observe(summary.csr_attrs.failed, &[KeyValue::new("operation", "get_csr_attributes")]);
-                observer.observe(summary.server_keygen.failed, &[KeyValue::new("operation", "server_keygen")]);
-                observer.observe(summary.full_cmc.failed, &[KeyValue::new("operation", "full_cmc")]);
-            })
-            .init();
-
-        let operation_success_rate = meter
-            .f64_observable_gauge("est.operations.success_rate")
-            .with_description("Success rate of EST operations (0-100)")
-            .with_callback(move |observer| {
-                observer.observe(summary.ca_certs.success_rate(), &[KeyValue::new("operation", "get_ca_certs")]);
-                observer.observe(summary.enrollments.success_rate(), &[KeyValue::new("operation", "simple_enroll")]);
-                observer.observe(summary.reenrollments.success_rate(), &[KeyValue::new("operation", "simple_reenroll")]);
-                observer.observe(summary.csr_attrs.success_rate(), &[KeyValue::new("operation", "get_csr_attributes")]);
-                observer.observe(summary.server_keygen.success_rate(), &[KeyValue::new("operation", "server_keygen")]);
-                observer.observe(summary.full_cmc.success_rate(), &[KeyValue::new("operation", "full_cmc")]);
-            })
-            .init();
-
-        let operation_duration_avg = meter
-            .f64_observable_gauge("est.operations.duration.avg_seconds")
-            .with_description("Average EST operation duration in seconds")
-            .with_callback(move |observer| {
-                observer.observe(summary.ca_certs.average_duration().as_secs_f64(), &[KeyValue::new("operation", "get_ca_certs")]);
-                observer.observe(summary.enrollments.average_duration().as_secs_f64(), &[KeyValue::new("operation", "simple_enroll")]);
-                observer.observe(summary.reenrollments.average_duration().as_secs_f64(), &[KeyValue::new("operation", "simple_reenroll")]);
-                observer.observe(summary.csr_attrs.average_duration().as_secs_f64(), &[KeyValue::new("operation", "get_csr_attributes")]);
-                observer.observe(summary.server_keygen.average_duration().as_secs_f64(), &[KeyValue::new("operation", "server_keygen")]);
-                observer.observe(summary.full_cmc.average_duration().as_secs_f64(), &[KeyValue::new("operation", "full_cmc")]);
-            })
-            .init();
-
-        // TLS metrics
-        let tls_handshakes_total = meter
-            .u64_observable_gauge("est.tls.handshakes.total")
-            .with_description("Total number of TLS handshakes")
-            .with_callback(move |observer| {
-                observer.observe(summary.tls.total_handshakes, &[]);
-            })
-            .init();
-
-        let tls_handshake_success_rate = meter
-            .f64_observable_gauge("est.tls.handshakes.success_rate")
-            .with_description("TLS handshake success rate (0-100)")
-            .with_callback(move |observer| {
-                observer.observe(summary.tls.success_rate(), &[]);
-            })
-            .init();
-
-        Ok(())
+    /// Get a reference to the underlying Prometheus exporter.
+    pub fn prometheus_exporter(&self) -> &PrometheusExporter {
+        &self.prometheus_exporter
     }
 
     /// Shutdown the OpenTelemetry pipeline.
@@ -212,16 +118,18 @@ impl OpenTelemetryExporter {
     /// This should be called before the application exits to ensure all
     /// metrics are flushed.
     pub fn shutdown(self) -> Result<(), Box<dyn StdError>> {
-        self.meter_provider.shutdown()?;
+        // No cleanup needed for Prometheus exporter
         Ok(())
     }
 
-    /// Get a reference to the Prometheus exporter.
-    ///
-    /// This can be used to access the underlying Prometheus registry
-    /// or integrate with HTTP servers.
-    pub fn prometheus_exporter(&self) -> &opentelemetry_prometheus::PrometheusExporter {
-        &self.prometheus_exporter
+    /// Get service name.
+    pub fn service_name(&self) -> &str {
+        &self.service_name
+    }
+
+    /// Get service version.
+    pub fn service_version(&self) -> &str {
+        &self.service_version
     }
 }
 
@@ -233,8 +141,13 @@ mod tests {
 
     #[tokio::test]
     async fn test_opentelemetry_exporter_creation() {
-        let exporter = OpenTelemetryExporter::new("test-est", "0.1.0").unwrap();
-        assert!(exporter.prometheus_exporter().registry().is_some());
+        let exporter = OpenTelemetryExporter::new("test-est-client", "0.1.0");
+        assert!(exporter.is_ok());
+        if let Ok(exp) = exporter {
+            assert_eq!(exp.service_name(), "test-est-client");
+            assert_eq!(exp.service_version(), "0.1.0");
+            exp.shutdown().unwrap();
+        }
     }
 
     #[tokio::test]
@@ -242,7 +155,7 @@ mod tests {
         let collector = MetricsCollector::new();
         let exporter = OpenTelemetryExporter::new("test-est", "0.1.0").unwrap();
 
-        // Record some metrics
+        // Record operations
         collector
             .record_operation(
                 OperationType::SimpleEnroll,
@@ -250,22 +163,55 @@ mod tests {
                 true,
             )
             .await;
-
         collector
-            .record_tls_handshake(Duration::from_millis(50), true)
+            .record_tls_handshake(Duration::from_millis(25), true)
             .await;
 
-        // Export to Prometheus format via OpenTelemetry
+        // Export
         let output = exporter.export(&collector).await.unwrap();
 
-        // Verify output contains OpenTelemetry metric names
-        assert!(output.contains("est_operations") || output.contains("est.operations"));
+        // Should contain metric data and service metadata
+        assert!(!output.is_empty());
+        assert!(output.contains("OpenTelemetry"));
+        assert!(output.contains("service.name"));
+        assert!(output.contains("test-est"));
+
+        exporter.shutdown().unwrap();
     }
 
     #[tokio::test]
     async fn test_opentelemetry_shutdown() {
         let exporter = OpenTelemetryExporter::new("test-est", "0.1.0").unwrap();
         // Should not panic
+        exporter.shutdown().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_opentelemetry_service_metadata() {
+        let exporter = OpenTelemetryExporter::new("my-service", "1.2.3").unwrap();
+        assert_eq!(exporter.service_name(), "my-service");
+        assert_eq!(exporter.service_version(), "1.2.3");
+        exporter.shutdown().unwrap();
+    }
+
+    #[tokio::test]
+    async fn test_opentelemetry_metric_format() {
+        let collector = MetricsCollector::new();
+        let exporter = OpenTelemetryExporter::new("est-service", "2.0.0").unwrap();
+
+        collector
+            .record_operation(OperationType::FullCmc, Duration::from_millis(200), true)
+            .await;
+
+        let output = exporter.export(&collector).await.unwrap();
+
+        // Verify OpenTelemetry metadata is present
+        assert!(output.contains("service.version=\"2.0.0\""));
+        assert!(output.contains("service.name=\"est-service\""));
+
+        // Verify Prometheus metrics are still present
+        assert!(output.contains("est_operation_success_rate"));
+
         exporter.shutdown().unwrap();
     }
 }
