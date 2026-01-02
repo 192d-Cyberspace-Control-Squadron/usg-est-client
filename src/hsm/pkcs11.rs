@@ -104,6 +104,8 @@ use std::sync::{Arc, Mutex};
 /// blocking and may impact async performance.
 pub struct Pkcs11KeyProvider {
     /// PKCS#11 context (library interface)
+    /// Kept alive for the lifetime of the provider to maintain the library connection.
+    #[allow(dead_code)]
     pkcs11: Arc<Pkcs11>,
 
     /// Active session with the token
@@ -299,7 +301,7 @@ impl Pkcs11KeyProvider {
         };
 
         // Build the AlgorithmIdentifier for EC public key
-        let mut alg_params = der::asn1::OctetStringRef::new(&curve_oid.to_der().unwrap())
+        let alg_params = der::asn1::OctetStringRef::new(&curve_oid.to_der().unwrap())
             .unwrap()
             .to_der()
             .unwrap();
@@ -515,13 +517,13 @@ impl KeyProvider for Pkcs11KeyProvider {
         label: Option<&str>,
     ) -> Result<KeyHandle> {
         // Check for duplicate labels
-        if let Some(label_str) = label {
-            if self.find_object_by_label(label_str)?.is_some() {
-                return Err(EstError::hsm(format!(
-                    "Key with label '{}' already exists",
-                    label_str
-                )));
-            }
+        if let Some(label_str) = label
+            && self.find_object_by_label(label_str)?.is_some()
+        {
+            return Err(EstError::hsm(format!(
+                "Key with label '{}' already exists",
+                label_str
+            )));
         }
 
         let session = self.session.lock().unwrap();
@@ -583,7 +585,7 @@ impl KeyProvider for Pkcs11KeyProvider {
                 (
                     Mechanism::RsaPkcsKeyPairGen,
                     vec![
-                        Attribute::ModulusBits(modulus_bits.into()),
+                        Attribute::ModulusBits(modulus_bits),
                         Attribute::PublicExponent(vec![0x01, 0x00, 0x01]), // 65537
                         Attribute::Label(label_bytes.clone()),
                         Attribute::Id(key_id.clone()),
@@ -604,7 +606,7 @@ impl KeyProvider for Pkcs11KeyProvider {
         };
 
         // Generate the key pair
-        let (pub_handle, priv_handle) = session
+        let (_pub_handle, priv_handle) = session
             .generate_key_pair(&mechanism, &pub_template, &priv_template)
             .map_err(|e| EstError::hsm(format!("Failed to generate key pair: {}", e)))?;
 

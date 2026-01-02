@@ -427,20 +427,20 @@ impl RevocationChecker {
             .map_err(|_| EstError::protocol("CRL is not valid UTF-8 for PEM parsing"))?;
 
         // Look for PEM boundaries
-        if let Some(pem_start) = pem_str.find("-----BEGIN X509 CRL-----") {
-            if let Some(pem_end) = pem_str.find("-----END X509 CRL-----") {
-                let pem_content = &pem_str[pem_start + 24..pem_end];
-                let cleaned_content = pem_content.replace(['\n', '\r', ' '], "");
-                let der_data = base64::engine::general_purpose::STANDARD
-                    .decode(cleaned_content)
-                    .map_err(|e| EstError::protocol(format!("Invalid base64 in PEM CRL: {}", e)))?;
+        if let Some(pem_start) = pem_str.find("-----BEGIN X509 CRL-----")
+            && let Some(pem_end) = pem_str.find("-----END X509 CRL-----")
+        {
+            let pem_content = &pem_str[pem_start + 24..pem_end];
+            let cleaned_content = pem_content.replace(['\n', '\r', ' '], "");
+            let der_data = base64::engine::general_purpose::STANDARD
+                .decode(cleaned_content)
+                .map_err(|e| EstError::protocol(format!("Invalid base64 in PEM CRL: {}", e)))?;
 
-                let crl = CertificateList::from_der(&der_data)
-                    .map_err(|e| EstError::protocol(format!("Failed to parse PEM CRL: {}", e)))?;
+            let crl = CertificateList::from_der(&der_data)
+                .map_err(|e| EstError::protocol(format!("Failed to parse PEM CRL: {}", e)))?;
 
-                debug!("Parsed CRL as PEM");
-                return Ok(crl);
-            }
+            debug!("Parsed CRL as PEM");
+            return Ok(crl);
         }
 
         Err(EstError::protocol("CRL is not valid DER or PEM format"))
@@ -499,14 +499,14 @@ impl RevocationChecker {
         }
 
         // Parse nextUpdate time from CRL
-        let next_update = crl.tbs_cert_list.next_update.as_ref().and_then(|time| {
+        let next_update = crl.tbs_cert_list.next_update.as_ref().map(|time| {
             // Convert X.509 time to SystemTime
             match time {
                 x509_cert::time::Time::UtcTime(utc) => {
-                    Some(SystemTime::UNIX_EPOCH + utc.to_unix_duration())
+                    SystemTime::UNIX_EPOCH + utc.to_unix_duration()
                 }
                 x509_cert::time::Time::GeneralTime(r#gen) => {
-                    Some(SystemTime::UNIX_EPOCH + r#gen.to_unix_duration())
+                    SystemTime::UNIX_EPOCH + r#gen.to_unix_duration()
                 }
             }
         });
@@ -571,11 +571,10 @@ impl RevocationChecker {
                         if let x509_cert::ext::pkix::name::GeneralName::UniformResourceIdentifier(
                             uri,
                         ) = general_name
+                            && let Ok(url) = std::str::from_utf8(uri.as_bytes())
                         {
-                            if let Ok(url) = std::str::from_utf8(uri.as_bytes()) {
-                                debug!("Found CRL URL: {}", url);
-                                urls.push(url.to_string());
-                            }
+                            debug!("Found CRL URL: {}", url);
+                            urls.push(url.to_string());
                         }
                     }
                 }
@@ -781,11 +780,11 @@ impl RevocationChecker {
                             for access_desc in aia.0.iter() {
                                 if access_desc.access_method == ocsp_oid {
                                     // Extract URL from access location (GeneralName)
-                                    if let x509_cert::ext::pkix::name::GeneralName::UniformResourceIdentifier(uri) = &access_desc.access_location {
-                                        if let Ok(url) = std::str::from_utf8(uri.as_bytes()) {
-                                            debug!("Found OCSP URL: {}", url);
-                                            return Ok(Some(url.to_string()));
-                                        }
+                                    if let x509_cert::ext::pkix::name::GeneralName::UniformResourceIdentifier(uri) = &access_desc.access_location
+                                        && let Ok(url) = std::str::from_utf8(uri.as_bytes())
+                                    {
+                                        debug!("Found OCSP URL: {}", url);
+                                        return Ok(Some(url.to_string()));
                                     }
                                 }
                             }

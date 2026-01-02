@@ -45,7 +45,7 @@
 //! # }
 //! ```
 
-use crate::metrics::{MetricsCollector, MetricsSummary, OperationType};
+use crate::metrics::{MetricsCollector, MetricsSummary};
 use prometheus::{
     Counter, CounterVec, Encoder, Gauge, GaugeVec, Histogram, HistogramOpts, HistogramVec, Opts,
     Registry, TextEncoder,
@@ -53,6 +53,10 @@ use prometheus::{
 use std::error::Error as StdError;
 
 /// Prometheus metrics exporter for EST client operations.
+///
+/// Fields are stored to keep the metrics registered with the registry.
+/// They are accessed through the registry for export, not directly.
+#[allow(dead_code)]
 pub struct PrometheusExporter {
     registry: Registry,
 
