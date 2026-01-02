@@ -119,6 +119,10 @@ pub enum EstError {
     /// Configuration error.
     #[error("Configuration error: {0}")]
     Config(String),
+
+    /// Platform-specific error (Windows, macOS, etc.).
+    #[error("Platform error: {0}")]
+    Platform(String),
 }
 
 impl EstError {
@@ -214,6 +218,11 @@ impl EstError {
     /// Create a configuration error with the given message.
     pub fn config(msg: impl Into<String>) -> Self {
         Self::Config(msg.into())
+    }
+
+    /// Create a platform-specific error with the given message.
+    pub fn platform(msg: impl Into<String>) -> Self {
+        Self::Platform(msg.into())
     }
 
     /// Returns true if this is a retryable error.

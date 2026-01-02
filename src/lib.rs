@@ -166,6 +166,12 @@ pub mod enveloped;
 #[cfg(feature = "auto-enroll")]
 pub mod auto_enroll;
 
+#[cfg(all(windows, feature = "windows"))]
+pub mod windows;
+
+#[cfg(feature = "windows-service")]
+pub mod logging;
+
 // Re-export main types at crate root for convenience
 pub use client::EstClient;
 #[cfg(feature = "validation")]
