@@ -30,7 +30,7 @@
 //! ```toml
 //! [logging]
 //! level = "info"
-//! path = "C:\\ProgramData\\EST\\logs\\est.log"
+//! path = "C:\\ProgramData\\Department of War\\EST\\logs\\est.log"
 //! json_format = false
 //! max_size_mb = 10
 //! max_files = 5
