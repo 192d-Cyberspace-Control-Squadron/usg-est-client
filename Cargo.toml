@@ -11,46 +11,46 @@ readme = "README.md"
 
 [dependencies]
 # Async runtime
-tokio = { version = "1", features = ["rt-multi-thread", "sync"] }
-async-trait = "0.1"
+tokio = { version = "1.47", features = ["rt-multi-thread", "sync"] }
+async-trait = "0.1.89"
 
 # HTTP client
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls-manual-roots"] }
+reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
 
 # TLS
-rustls = "0.23"
-rustls-pemfile = "2"
-rustls-pki-types = "1"
-webpki-roots = "0.26"
+rustls = "0.23.35"
+rustls-pemfile = "2.2"
+rustls-pki-types = "1.13"
+webpki-roots = "1.0"
 
 # Cryptography - RustCrypto ecosystem
 x509-cert = "0.2"
-der = { version = "0.7", features = ["alloc", "pem"] }
+der = { version = "0.7.9", features = ["alloc", "pem"] }
 cms = "0.2"
-pkcs8 = { version = "0.10", features = ["encryption", "pem"] }
-spki = "0.7"
-const-oid = "0.9"
-sha2 = "0.10"
+pkcs8 = { version = "0.10.2", features = ["encryption", "pem"] }
+spki = "0.7.3"
+const-oid = "0.9.6"
+sha2 = "0.10.8"
 
 # CSR generation (optional feature)
-rcgen = { version = "0.13", optional = true }
+rcgen = { version = "0.14", optional = true }
 
 # Encoding
-base64 = "0.22"
+base64 = "0.22.1"
 
 # Error handling
-thiserror = "2"
+thiserror = "2.0.17"
 
 # URL handling
-url = "2.5"
+url = "2.5.7"
 
 # Logging
-tracing = "0.1"
+tracing = "0.1.44"
 
 [dev-dependencies]
-tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
-tracing-subscriber = "0.3"
-wiremock = "0.6"
+tokio = { version = "1.47", features = ["rt-multi-thread", "macros"] }
+tracing-subscriber = "0.3.22"
+wiremock = "0.6.5"
 
 [[bin]]
 name = "generate_fixtures"

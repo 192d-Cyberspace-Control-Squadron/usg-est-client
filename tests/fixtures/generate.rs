@@ -19,7 +19,7 @@
 //! for use in integration tests.
 
 use base64::prelude::*;
-use rcgen::{Certificate, CertificateParams, DistinguishedName, DnType, KeyPair};
+use rcgen::{Certificate, CertificateParams, DistinguishedName, DnType, Issuer, KeyPair};
 use std::fs;
 use std::path::Path;
 
@@ -87,13 +87,13 @@ pub fn generate_all_fixtures() -> Result<(), Box<dyn std::error::Error>> {
 
 fn generate_test_certs() -> Result<TestCerts, Box<dyn std::error::Error>> {
     // Generate CA
-    let (ca_cert, ca_key) = generate_ca_cert()?;
+    let (ca_cert, ca_key, ca_params) = generate_ca_cert()?;
 
     // Generate client cert signed by CA
-    let (client_cert, client_key) = generate_client_cert(&ca_cert, &ca_key)?;
+    let (client_cert, client_key) = generate_client_cert(&ca_cert, &ca_key, &ca_params)?;
 
     // Generate server cert signed by CA
-    let (server_cert, server_key) = generate_server_cert(&ca_cert, &ca_key)?;
+    let (server_cert, server_key) = generate_server_cert(&ca_cert, &ca_key, &ca_params)?;
 
     Ok(TestCerts {
         ca_cert,
@@ -105,7 +105,8 @@ fn generate_test_certs() -> Result<TestCerts, Box<dyn std::error::Error>> {
     })
 }
 
-fn generate_ca_cert() -> Result<(Certificate, KeyPair), Box<dyn std::error::Error>> {
+fn generate_ca_cert(
+) -> Result<(Certificate, KeyPair, CertificateParams), Box<dyn std::error::Error>> {
     let mut params = CertificateParams::default();
 
     let mut dn = DistinguishedName::new();
@@ -124,12 +125,13 @@ fn generate_ca_cert() -> Result<(Certificate, KeyPair), Box<dyn std::error::Erro
     let key_pair = KeyPair::generate()?;
     let cert = params.self_signed(&key_pair)?;
 
-    Ok((cert, key_pair))
+    Ok((cert, key_pair, params))
 }
 
 fn generate_client_cert(
-    ca: &Certificate,
+    _ca: &Certificate,
     ca_key: &KeyPair,
+    ca_params: &CertificateParams,
 ) -> Result<(Certificate, KeyPair), Box<dyn std::error::Error>> {
     let mut params = CertificateParams::default();
 
@@ -138,9 +140,9 @@ fn generate_client_cert(
     dn.push(DnType::OrganizationName, "EST Test Organization");
     params.distinguished_name = dn;
 
-    params.subject_alt_names = vec![rcgen::SanType::DnsName(rcgen::Ia5String::try_from(
-        "test-client.example.com",
-    )?)];
+    params.subject_alt_names = vec![rcgen::SanType::DnsName(
+        "test-client.example.com".try_into()?,
+    )];
 
     params.key_usages = vec![
         rcgen::KeyUsagePurpose::DigitalSignature,
@@ -150,14 +152,16 @@ fn generate_client_cert(
     params.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ClientAuth];
 
     let key_pair = KeyPair::generate()?;
-    let cert = params.signed_by(&key_pair, ca, ca_key)?;
+    let issuer = Issuer::from_params(ca_params, ca_key);
+    let cert = params.signed_by(&key_pair, &issuer)?;
 
     Ok((cert, key_pair))
 }
 
 fn generate_server_cert(
-    ca: &Certificate,
+    _ca: &Certificate,
     ca_key: &KeyPair,
+    ca_params: &CertificateParams,
 ) -> Result<(Certificate, KeyPair), Box<dyn std::error::Error>> {
     let mut params = CertificateParams::default();
 
@@ -166,9 +170,7 @@ fn generate_server_cert(
     dn.push(DnType::OrganizationName, "EST Test Organization");
     params.distinguished_name = dn;
 
-    params.subject_alt_names = vec![rcgen::SanType::DnsName(rcgen::Ia5String::try_from(
-        "est.example.com",
-    )?)];
+    params.subject_alt_names = vec![rcgen::SanType::DnsName("est.example.com".try_into()?)];
 
     params.key_usages = vec![
         rcgen::KeyUsagePurpose::DigitalSignature,
@@ -178,7 +180,8 @@ fn generate_server_cert(
     params.extended_key_usages = vec![rcgen::ExtendedKeyUsagePurpose::ServerAuth];
 
     let key_pair = KeyPair::generate()?;
-    let cert = params.signed_by(&key_pair, ca, ca_key)?;
+    let issuer = Issuer::from_params(ca_params, ca_key);
+    let cert = params.signed_by(&key_pair, &issuer)?;
 
     Ok((cert, key_pair))
 }

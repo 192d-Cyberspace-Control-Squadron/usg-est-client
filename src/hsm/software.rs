@@ -71,7 +71,7 @@ use crate::error::{EstError, Result};
 use async_trait::async_trait;
 use const_oid::db::rfc5912::{ECDSA_WITH_SHA_256, ECDSA_WITH_SHA_384, SHA_256_WITH_RSA_ENCRYPTION};
 use der::Decode;
-use rcgen::{KeyPair, SignatureAlgorithm};
+use rcgen::{KeyPair, PublicKeyData, SignatureAlgorithm};
 use spki::{AlgorithmIdentifierOwned, SubjectPublicKeyInfoOwned};
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -236,8 +236,8 @@ impl KeyProvider for SoftwareKeyProvider {
     async fn public_key(&self, handle: &KeyHandle) -> Result<SubjectPublicKeyInfoOwned> {
         let (key_pair, _) = self.get_key_pair(handle)?;
 
-        // Get the public key DER from rcgen
-        let public_key_der = key_pair.public_key_der();
+        // Get the public key SPKI from rcgen (DER encoded)
+        let public_key_der = key_pair.subject_public_key_info();
 
         // Parse it into SubjectPublicKeyInfo
         SubjectPublicKeyInfoOwned::from_der(&public_key_der)

@@ -35,32 +35,35 @@ use crate::error::{EstError, Result};
 pub fn build_http_client(config: &EstClientConfig) -> Result<reqwest::Client> {
     let mut builder = reqwest::Client::builder()
         .timeout(config.timeout)
-        .use_rustls_tls();
+        .tls_backend_rustls();
 
     // Configure TLS based on trust anchors
     match &config.trust_anchors {
         TrustAnchors::WebPki => {
-            // Use Mozilla's root store - this is the default for reqwest with rustls
-            builder = builder.tls_built_in_root_certs(true);
+            // Use built-in roots provided by the rustls backend
+            builder = builder.tls_backend_rustls();
         }
         TrustAnchors::Explicit(ca_certs) => {
-            builder = builder.tls_built_in_root_certs(false);
+            let mut certs = Vec::with_capacity(ca_certs.len());
             for ca_pem in ca_certs {
                 let cert = reqwest::Certificate::from_pem(ca_pem)
                     .map_err(|e| EstError::tls(format!("Failed to parse CA certificate: {}", e)))?;
-                builder = builder.add_root_certificate(cert);
+                certs.push(cert);
             }
+            builder = builder.tls_backend_rustls().tls_certs_only(certs);
         }
         TrustAnchors::Bootstrap(_) => {
             // Bootstrap mode still needs some trust for the initial connection
             // The actual verification happens after fetching certificates
             builder = builder
-                .tls_built_in_root_certs(false)
+                .tls_backend_rustls()
+                .tls_certs_only(Vec::new())
                 .danger_accept_invalid_certs(true);
         }
         TrustAnchors::InsecureAcceptAny => {
             builder = builder
-                .tls_built_in_root_certs(false)
+                .tls_backend_rustls()
+                .tls_certs_only(Vec::new())
                 .danger_accept_invalid_certs(true);
         }
     }
