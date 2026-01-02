@@ -447,7 +447,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ⚠️  Create validation example (`examples/validate_chain.rs`) - TODO
 - ⚠️  Document validation in `docs/security.md` - TODO
 
-#### 10.2.7 Metrics and Monitoring ✅ COMPLETE
+#### 10.2.8 Metrics and Monitoring ✅ COMPLETE
 
 - ✅ Design metrics collection API (`src/metrics.rs`)
 - ✅ Add operation counters (enrollments, renewals, errors)
