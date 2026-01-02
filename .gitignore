@@ -17,3 +17,7 @@ target/
 #.idea/
 
 CLAUDE.md
+
+# Documentation site artifacts
+site/
+.venv/

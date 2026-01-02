@@ -1,133 +1,119 @@
-# usg-est-client Documentation
+# USG RADIUS Documentation
 
-Welcome to the documentation for `usg-est-client`, an RFC 7030 compliant EST (Enrollment over Secure Transport) client library for Rust.
+This directory contains the complete documentation for the USG RADIUS server, built with Zensical.
 
-## Table of Contents
+## Documentation Structure
 
-1. [Getting Started](getting-started.md) - Installation, setup, and quick start
-2. [EST Operations](operations.md) - Detailed guide to all EST operations
-3. [Configuration](configuration.md) - Configuring the EST client
-4. [Security Considerations](security.md) - Security best practices and considerations
-5. [API Reference](api-reference.md) - Complete API documentation
-6. [Examples](examples.md) - Usage examples and patterns
-
-## What is EST?
-
-EST (Enrollment over Secure Transport) is a protocol defined in [RFC 7030](https://datatracker.ietf.org/doc/html/rfc7030) that enables automated certificate management over HTTPS. It provides a simple, standardized way for devices and applications to:
-
-- Enroll for new certificates
-- Renew/rekey existing certificates
-- Retrieve CA certificates
-- Query certificate signing requirements
-
-## Key Features
-
-- **RFC 7030 Compliant**: Full implementation of all mandatory and optional EST operations
-- **Async-First**: Built on tokio for modern async/await workflows
-- **Type-Safe**: Comprehensive Rust type system ensures correct usage
-- **Secure**: TLS 1.2+ with rustls, support for client certificate authentication
-- **Flexible**: Bootstrap/TOFU mode, HTTP Basic auth, custom trust anchors
-- **Feature-Gated**: Optional CSR generation helpers to minimize dependencies
-- **Well-Tested**: 39+ unit tests covering all operations
-
-## Quick Example
-
-```rust
-use usg_est_client::{EstClient, EstClientConfig};
-
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Configure the client
-    let config = EstClientConfig::builder()
-        .server_url("https://est.example.com")?
-        .build()?;
-
-    // Create the client
-    let client = EstClient::new(config).await?;
-
-    // Get CA certificates
-    let ca_certs = client.get_ca_certs().await?;
-    println!("Retrieved {} CA certificates", ca_certs.len());
-
-    Ok(())
-}
+```
+docs/
+├── docs/                          # Documentation content
+│   ├── index.md                   # Homepage
+│   ├── quick-reference.md         # Quick reference guide
+│   ├── getting-started/           # Installation and setup
+│   │   └── installation.md
+│   ├── protocol/                  # RADIUS protocol details
+│   │   ├── overview.md
+│   │   └── attributes.md
+│   ├── configuration/             # Server configuration
+│   │   ├── server.md
+│   │   ├── users.md
+│   │   └── clients.md
+│   ├── api/                       # API reference
+│   │   └── overview.md
+│   ├── security/                  # Security guidelines
+│   │   └── overview.md
+│   └── examples/                  # Usage examples
+│       └── basic-auth.md
+├── zensical.toml                  # Site configuration
+└── README.md                      # This file
 ```
 
-## Supported EST Operations
+## Building the Documentation
 
-| Operation | Endpoint | Description | Status |
-|-----------|----------|-------------|--------|
-| Distribution of CA Certificates | `GET /cacerts` | Retrieve CA certificates | ✅ Implemented |
-| Simple Enrollment | `POST /simpleenroll` | Request new certificate | ✅ Implemented |
-| Simple Re-enrollment | `POST /simplereenroll` | Renew/rekey certificate | ✅ Implemented |
-| CSR Attributes | `GET /csrattrs` | Query CSR requirements | ✅ Implemented |
-| Server-Side Key Generation | `POST /serverkeygen` | Server generates key pair | ✅ Implemented |
-| Full CMC | `POST /fullcmc` | Complex PKI operations | ✅ Implemented |
+### Prerequisites
 
-## Architecture
+Install Zensical (if not already installed):
 
-```text
-┌─────────────────────────────────────────────────────────────┐
-│                        EstClient                             │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │   CA Certs   │  │  Enrollment  │  │  CSR Attrs   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │ Re-enrollment│  │ Server Keygen│  │   Full CMC   │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│                    HTTP/TLS Layer (reqwest)                  │
-└─────────────────────────────────────────────────────────────┘
-                           ↓
-┌─────────────────────────────────────────────────────────────┐
-│                         EST Server                           │
-└─────────────────────────────────────────────────────────────┘
+```bash
+pip install zensical
+# or
+pipx install zensical
 ```
 
-## Project Structure
+### Build the Site
 
-```text
-usg-est-client/
-├── src/
-│   ├── lib.rs              # Public API exports
-│   ├── client.rs           # Main EstClient implementation
-│   ├── config.rs           # Configuration and builder
-│   ├── error.rs            # Error types
-│   ├── tls.rs              # TLS configuration
-│   ├── bootstrap.rs        # Bootstrap/TOFU mode
-│   ├── csr.rs              # CSR generation (feature-gated)
-│   ├── operations/         # EST operation implementations
-│   │   ├── cacerts.rs
-│   │   ├── enroll.rs
-│   │   ├── reenroll.rs
-│   │   ├── csrattrs.rs
-│   │   ├── serverkeygen.rs
-│   │   └── fullcmc.rs
-│   └── types/              # Message types and parsing
-│       ├── pkcs7.rs
-│       ├── csr_attrs.rs
-│       └── cmc.rs
-├── examples/               # Usage examples
-│   ├── simple_enroll.rs
-│   ├── reenroll.rs
-│   └── bootstrap.rs
-└── docs/                   # Documentation
-    └── ...
+```bash
+cd docs
+zensical build
 ```
 
-## License
+The site will be generated in the `site/` directory.
 
-This project is licensed under the Apache-2.0 license. See the LICENSE file for details.
+### Serve Locally
 
-## Contributing
+```bash
+cd docs
+zensical serve
+```
 
-Contributions are welcome! Please ensure all tests pass and add appropriate documentation for new features.
+Then visit http://127.0.0.1:8000 in your browser.
 
-## Resources
+### Watch Mode
 
-- [RFC 7030 - EST Protocol](https://datatracker.ietf.org/doc/html/rfc7030)
-- [RFC 5272 - CMC: Structures](https://datatracker.ietf.org/doc/html/rfc5272)
-- [RFC 2986 - PKCS#10](https://datatracker.ietf.org/doc/html/rfc2986)
-- [RFC 5652 - CMS](https://datatracker.ietf.org/doc/html/rfc5652)
+For development, use watch mode to auto-rebuild on changes:
+
+```bash
+cd docs
+zensical serve --watch
+```
+
+## Documentation Sections
+
+### Home (index.md)
+
+Overview of USG RADIUS with quick start guide and feature highlights.
+
+### Quick Reference (quick-reference.md)
+
+Fast reference for common tasks, commands, and configurations.
+
+### Getting Started
+
+- **Installation**: Step-by-step installation and first run
+
+### Protocol
+
+- **Overview**: RADIUS protocol details, packet structure, authentication flow
+- **Attributes**: Complete attribute reference with examples
+
+### Configuration
+
+- **Server**: Server settings and configuration
+- **Users**: User management and authentication
+- **Clients**: Client (NAS) configuration
+
+### API Reference
+
+- **Overview**: Using USG RADIUS as a library, custom authentication handlers
+
+### Security
+
+- **Overview**: Security considerations, best practices, cryptographic details
+
+### Examples
+
+- **Basic Authentication**: Complete working example with code
+
+## Contributing to Documentation
+
+1. Create or edit Markdown files in `docs/docs/`
+2. Test locally with `zensical serve`
+3. Commit changes
+4. Documentation will be built and deployed automatically
+
+## Contact
+
+For documentation issues or suggestions:
+
+- Open an issue on GitHub
+- Contact: John Edward Willman V <john.willman.1@us.af.mil>
