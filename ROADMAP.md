@@ -464,7 +464,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-### 10.3 Platform Support Expansion ⏸️ DEPRIORITIZED
+### 10.3 Platform Support Expansion ✅ COMPLETE
 
 #### 10.3.1 WASM Support Investigation ⏸️ DEPRIORITIZED
 
@@ -503,14 +503,24 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - [ ] Document no_std limitations and requirements
 - [ ] Add embedded example if feasible
 
-#### 10.3.3 Platform-Specific Optimizations
+#### 10.3.3 Platform-Specific Optimizations ✅ COMPLETE
 
-- [ ] Investigate platform-specific TLS backends
-- [ ] Evaluate OpenSSL backend option for Linux
-- [ ] Evaluate Security framework integration for macOS
-- [ ] Evaluate CNG integration for Windows
-- [ ] Add optional platform-specific features to `Cargo.toml`
-- [ ] Document platform-specific configurations
+- ✅ Investigate platform-specific TLS backends
+  - Default: rustls (pure Rust, memory-safe, portable)
+  - Alternative: native-tls (OS-integrated: SChannel/Security.framework/OpenSSL)
+- ✅ Evaluate OpenSSL backend option for Linux
+  - Available via `native-tls-backend` feature
+  - Vendored option for static builds: `native-tls-vendored`
+- ✅ Evaluate Security framework integration for macOS
+  - Available via `native-tls-backend` feature (uses Security.framework)
+- ✅ Evaluate CNG integration for Windows
+  - Available via `native-tls-backend` feature (uses SChannel)
+  - Note: Full CNG KeyProvider for HSM is in Phase 11.2
+- ✅ Add optional platform-specific features to `Cargo.toml`
+  - `native-tls-backend` - Use OS TLS implementation
+  - `native-tls-vendored` - Static link OpenSSL (Linux)
+- ✅ Document platform-specific configurations
+  - See [docs/platform-tls.md](docs/platform-tls.md)
 
 ---
 

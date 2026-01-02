@@ -14,8 +14,11 @@ readme = "README.md"
 tokio = { version = "1.47", features = ["rt-multi-thread", "sync"] }
 async-trait = "0.1.89"
 
-# HTTP client
+# HTTP client (rustls is default, native-tls available as optional backend)
 reqwest = { version = "0.13", default-features = false, features = ["rustls"] }
+
+# Native TLS backend (optional, for platform-specific TLS)
+native-tls = { version = "0.2", optional = true }
 
 # TLS
 rustls = "0.23.35"
@@ -121,3 +124,9 @@ metrics-prometheus = ["metrics", "prometheus", "opentelemetry", "opentelemetry-p
 revocation = []
 enveloped = ["aes", "cbc", "des"]
 auto-enroll = ["toml", "serde", "serde_json", "dirs", "hostname", "renewal", "csr-gen"]
+
+# Platform-specific TLS backends (alternative to default rustls)
+# Use native-tls for OS-integrated TLS (SChannel on Windows, Security.framework on macOS, OpenSSL on Linux)
+native-tls-backend = ["native-tls", "reqwest/native-tls"]
+# Vendor OpenSSL for static linking on Linux (useful for musl/Alpine/Lambda deployments)
+native-tls-vendored = ["native-tls-backend", "reqwest/native-tls-vendored"]
