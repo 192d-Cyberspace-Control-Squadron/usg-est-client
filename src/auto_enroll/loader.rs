@@ -215,7 +215,7 @@ impl ConfigLoader {
             // Windows: ProgramData
             if let Some(program_data) = std::env::var_os("PROGRAMDATA") {
                 let mut path = PathBuf::from(program_data);
-                path.pusj("Department of War");
+                path.push("Department of War");
                 path.push("EST");
                 path.push("config.toml");
                 paths.push(path);
@@ -224,7 +224,7 @@ impl ConfigLoader {
             // Windows: LocalAppData
             if let Some(local_app_data) = dirs::data_local_dir() {
                 let mut path = local_app_data;
-                path.pusj("Department of War");
+                path.push("Department of War");
                 path.push("EST");
                 path.push("config.toml");
                 paths.push(path);
@@ -539,5 +539,315 @@ common_name = "${TEST_HOST_12345}.example.com"
         unsafe {
             std::env::remove_var("TEST_HOST_12345");
         }
+    }
+
+    // ===== Additional Phase 11.8 Loader Tests =====
+
+    #[test]
+    fn test_loader_default_settings() {
+        let loader = ConfigLoader::new();
+        // Default: expand variables, validate, use EST_CONFIG_PATH
+        assert!(loader.expand_variables);
+        assert!(loader.validate);
+        assert_eq!(loader.env_var_name, "EST_CONFIG_PATH");
+        assert!(loader.explicit_path.is_none());
+    }
+
+    #[test]
+    fn test_loader_with_custom_env_var() {
+        let loader = ConfigLoader::new().with_env_var("MY_CUSTOM_CONFIG_PATH");
+        assert_eq!(loader.env_var_name, "MY_CUSTOM_CONFIG_PATH");
+    }
+
+    #[test]
+    fn test_loader_disabled_expansion() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "${COMPUTERNAME}.example.com"
+"#;
+
+        let config = ConfigLoader::new()
+            .with_validate(false)
+            .with_expand_variables(false)
+            .load_from_str(toml)
+            .unwrap();
+
+        // Variable should NOT be expanded
+        assert_eq!(
+            config.certificate.common_name,
+            "${COMPUTERNAME}.example.com"
+        );
+    }
+
+    #[test]
+    fn test_loader_validation_enabled() {
+        // Invalid config: HTTP URL (not HTTPS)
+        let toml = r#"
+[server]
+url = "http://est.example.com"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let result = ConfigLoader::new()
+            .with_validate(true)
+            .with_expand_variables(false)
+            .load_from_str(toml);
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("HTTPS"));
+    }
+
+    #[test]
+    fn test_loader_validation_disabled() {
+        // Invalid config: HTTP URL (not HTTPS), but validation disabled
+        let toml = r#"
+[server]
+url = "http://est.example.com"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let result = ConfigLoader::new()
+            .with_validate(false)
+            .with_expand_variables(false)
+            .load_from_str(toml);
+
+        // Should succeed because validation is disabled
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_loader_env_var_takes_precedence() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "from_env_var"
+"#;
+
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(toml.as_bytes()).unwrap();
+        let file_path = file.path().to_string_lossy().to_string();
+
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_EST_CONFIG_PATH_12345", &file_path);
+        }
+
+        let config = ConfigLoader::new()
+            .with_env_var("TEST_EST_CONFIG_PATH_12345")
+            .with_validate(false)
+            .with_expand_variables(false)
+            .load()
+            .unwrap();
+
+        assert_eq!(config.certificate.common_name, "from_env_var");
+
+        unsafe {
+            std::env::remove_var("TEST_EST_CONFIG_PATH_12345");
+        }
+    }
+
+    #[test]
+    fn test_loader_env_var_file_not_found() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var(
+                "TEST_EST_CONFIG_PATH_NOTFOUND",
+                "/nonexistent/path/config.toml",
+            );
+        }
+
+        let result = ConfigLoader::new()
+            .with_env_var("TEST_EST_CONFIG_PATH_NOTFOUND")
+            .load();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not found"));
+
+        unsafe {
+            std::env::remove_var("TEST_EST_CONFIG_PATH_NOTFOUND");
+        }
+    }
+
+    #[test]
+    fn test_loader_config_exists() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(toml.as_bytes()).unwrap();
+
+        let loader = ConfigLoader::new().with_path(file.path());
+        assert!(loader.config_exists());
+
+        let loader_missing = ConfigLoader::new().with_path("/nonexistent/config.toml");
+        assert!(!loader_missing.config_exists());
+    }
+
+    #[test]
+    fn test_loader_find_config_file_explicit() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(toml.as_bytes()).unwrap();
+        let expected_path = file.path().to_path_buf();
+
+        let loader = ConfigLoader::new().with_path(file.path());
+        let found_path = loader.find_config_file().unwrap();
+
+        assert_eq!(found_path, expected_path);
+    }
+
+    #[test]
+    fn test_loader_invalid_toml_in_file() {
+        let invalid_toml = r#"
+[server
+url = "https://est.example.com"
+"#;
+
+        let mut file = NamedTempFile::new().unwrap();
+        file.write_all(invalid_toml.as_bytes()).unwrap();
+
+        let result = ConfigLoader::new()
+            .with_path(file.path())
+            .with_validate(false)
+            .load();
+
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid TOML"));
+    }
+
+    #[test]
+    fn test_write_default_config() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let config_path = temp_dir.path().join("est").join("config.toml");
+
+        write_default_config(&config_path).unwrap();
+
+        assert!(config_path.exists());
+
+        // Verify it's valid TOML that can be parsed
+        let content = std::fs::read_to_string(&config_path).unwrap();
+        let config = ConfigLoader::new()
+            .with_validate(false)
+            .with_expand_variables(false)
+            .load_from_str(&content);
+
+        assert!(config.is_ok());
+    }
+
+    #[test]
+    fn test_write_default_config_creates_dirs() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let nested_path = temp_dir
+            .path()
+            .join("a")
+            .join("b")
+            .join("c")
+            .join("config.toml");
+
+        // Parent dirs don't exist
+        assert!(!nested_path.parent().unwrap().exists());
+
+        write_default_config(&nested_path).unwrap();
+
+        // Now they should exist
+        assert!(nested_path.exists());
+    }
+
+    #[test]
+    fn test_loader_with_all_options() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test.example.com"
+"#;
+
+        // Test chaining all builder methods
+        let config = ConfigLoader::new()
+            .with_validate(false)
+            .with_expand_variables(false)
+            .with_env_var("CUSTOM_VAR")
+            .load_from_str(toml)
+            .unwrap();
+
+        assert_eq!(config.server.url, "https://est.example.com");
+    }
+
+    #[test]
+    fn test_loader_default_impl() {
+        // Test the Default implementation
+        let loader = ConfigLoader::default();
+        assert!(loader.expand_variables);
+        assert!(loader.validate);
+    }
+
+    #[test]
+    fn test_loader_multiple_variables_expansion() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_HOST_A", "host");
+            std::env::set_var("TEST_DOMAIN_A", "example.com");
+        }
+
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "${TEST_HOST_A}.${TEST_DOMAIN_A}"
+organization = "Org for ${TEST_HOST_A}"
+"#;
+
+        let config = ConfigLoader::new()
+            .with_validate(false)
+            .with_expand_variables(true)
+            .load_from_str(toml)
+            .unwrap();
+
+        assert_eq!(config.certificate.common_name, "host.example.com");
+        assert_eq!(config.certificate.organization, Some("Org for host".to_string()));
+
+        unsafe {
+            std::env::remove_var("TEST_HOST_A");
+            std::env::remove_var("TEST_DOMAIN_A");
+        }
+    }
+
+    #[test]
+    fn test_loader_search_paths_include_expected() {
+        let loader = ConfigLoader::new();
+        let paths = loader.get_search_paths();
+
+        // Should include est-config.toml in current dir
+        assert!(paths.iter().any(|p| p.ends_with("est-config.toml")));
+
+        // Should include config.toml in current dir
+        assert!(paths.iter().any(|p| {
+            p.file_name()
+                .map(|n| n == "config.toml")
+                .unwrap_or(false)
+        }));
     }
 }

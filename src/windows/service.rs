@@ -921,4 +921,244 @@ mod tests {
         assert_eq!(config.reset_period, 86400);
         assert_eq!(config.restart_delay, 60000);
     }
+
+    // ===== Additional Phase 11.8 Service Tests =====
+
+    #[test]
+    fn test_all_service_state_values() {
+        // Test all state value conversions
+        for (val, expected) in [
+            (1u32, ServiceStateValue::Stopped),
+            (2, ServiceStateValue::StartPending),
+            (3, ServiceStateValue::StopPending),
+            (4, ServiceStateValue::Running),
+            (5, ServiceStateValue::ContinuePending),
+            (6, ServiceStateValue::PausePending),
+            (7, ServiceStateValue::Paused),
+        ] {
+            assert_eq!(ServiceStateValue::from_u32(val), expected);
+            // Round-trip test
+            assert_eq!(ServiceStateValue::from_u32(expected as u32), expected);
+        }
+    }
+
+    #[test]
+    fn test_service_state_default() {
+        let state = ServiceState::default();
+        assert!(!state.is_shutdown_requested());
+        assert!(!state.is_paused());
+        assert_eq!(state.get_state(), ServiceStateValue::Stopped);
+    }
+
+    #[test]
+    fn test_service_state_transitions() {
+        let state = ServiceState::new();
+
+        // Start transition
+        state.set_state(ServiceStateValue::StartPending);
+        assert_eq!(state.get_state(), ServiceStateValue::StartPending);
+
+        state.set_state(ServiceStateValue::Running);
+        assert_eq!(state.get_state(), ServiceStateValue::Running);
+
+        // Pause transition
+        state.set_state(ServiceStateValue::PausePending);
+        state.set_paused(true);
+        assert!(state.is_paused());
+        state.set_state(ServiceStateValue::Paused);
+        assert_eq!(state.get_state(), ServiceStateValue::Paused);
+
+        // Resume transition
+        state.set_state(ServiceStateValue::ContinuePending);
+        state.set_paused(false);
+        assert!(!state.is_paused());
+        state.set_state(ServiceStateValue::Running);
+        assert_eq!(state.get_state(), ServiceStateValue::Running);
+
+        // Stop transition
+        state.set_state(ServiceStateValue::StopPending);
+        state.request_shutdown();
+        assert!(state.is_shutdown_requested());
+        state.set_state(ServiceStateValue::Stopped);
+        assert_eq!(state.get_state(), ServiceStateValue::Stopped);
+    }
+
+    #[test]
+    fn test_service_state_concurrent_access() {
+        use std::thread;
+
+        let state = Arc::new(ServiceState::new());
+
+        let handles: Vec<_> = (0..10)
+            .map(|i| {
+                let state = Arc::clone(&state);
+                thread::spawn(move || {
+                    if i % 2 == 0 {
+                        state.set_state(ServiceStateValue::Running);
+                    } else {
+                        state.set_state(ServiceStateValue::Paused);
+                    }
+                    state.get_state()
+                })
+            })
+            .collect();
+
+        for handle in handles {
+            let _ = handle.join().unwrap();
+        }
+
+        // State should be valid (either Running or Paused)
+        let final_state = state.get_state();
+        assert!(
+            final_state == ServiceStateValue::Running || final_state == ServiceStateValue::Paused
+        );
+    }
+
+    #[test]
+    fn test_service_config_custom() {
+        let config = ServiceConfig {
+            config_path: Some("/etc/est/config.toml".to_string()),
+            verbose: true,
+            check_interval: 1800,
+            allow_pause: false,
+            shutdown_timeout: 60,
+        };
+
+        assert_eq!(
+            config.config_path,
+            Some("/etc/est/config.toml".to_string())
+        );
+        assert!(config.verbose);
+        assert_eq!(config.check_interval, 1800);
+        assert!(!config.allow_pause);
+        assert_eq!(config.shutdown_timeout, 60);
+    }
+
+    #[test]
+    fn test_enrollment_service_creation() {
+        let config = ServiceConfig::default();
+        let service = EnrollmentService::new(config);
+        let state = service.state();
+
+        assert_eq!(state.get_state(), ServiceStateValue::Stopped);
+        assert!(!state.is_shutdown_requested());
+        assert!(!state.is_paused());
+    }
+
+    #[test]
+    fn test_enrollment_service_state_sharing() {
+        let config = ServiceConfig::default();
+        let service = EnrollmentService::new(config);
+
+        let state1 = service.state();
+        let state2 = service.state();
+
+        // Both should point to the same state
+        state1.set_state(ServiceStateValue::Running);
+        assert_eq!(state2.get_state(), ServiceStateValue::Running);
+
+        state2.request_shutdown();
+        assert!(state1.is_shutdown_requested());
+    }
+
+    #[test]
+    fn test_service_account_custom_no_password() {
+        let account = installer::ServiceAccount::Custom {
+            account: "WORKGROUP\\ServiceUser".to_string(),
+            password: None,
+        };
+        assert_eq!(account.account_name(), Some("WORKGROUP\\ServiceUser"));
+    }
+
+    #[test]
+    fn test_install_config_custom() {
+        let config = installer::InstallConfig {
+            name: "CustomService".to_string(),
+            display_name: "Custom EST Service".to_string(),
+            description: "Custom description".to_string(),
+            executable_path: "C:\\Program Files\\EST\\est-enroll.exe".to_string(),
+            account: installer::ServiceAccount::NetworkService,
+            start_type: installer::StartType::AutomaticDelayed,
+            recovery: installer::RecoveryConfig {
+                first_failure: installer::RecoveryAction::Restart,
+                second_failure: installer::RecoveryAction::Restart,
+                subsequent_failures: installer::RecoveryAction::None,
+                reset_period: 43200,
+                restart_delay: 30000,
+            },
+            dependencies: vec!["Tcpip".to_string()],
+        };
+
+        assert_eq!(config.name, "CustomService");
+        assert_eq!(config.display_name, "Custom EST Service");
+        assert!(matches!(
+            config.start_type,
+            installer::StartType::AutomaticDelayed
+        ));
+        assert_eq!(config.dependencies.len(), 1);
+    }
+
+    #[test]
+    fn test_all_start_types() {
+        // Verify all start types are constructible
+        let _auto = installer::StartType::Automatic;
+        let _delayed = installer::StartType::AutomaticDelayed;
+        let _manual = installer::StartType::Manual;
+        let _disabled = installer::StartType::Disabled;
+    }
+
+    #[test]
+    fn test_all_recovery_actions() {
+        // Verify all recovery actions are constructible
+        let _none = installer::RecoveryAction::None;
+        let _restart = installer::RecoveryAction::Restart;
+        let _reboot = installer::RecoveryAction::Reboot;
+        let _run_cmd = installer::RecoveryAction::RunCommand;
+    }
+
+    #[test]
+    fn test_recovery_config_custom() {
+        let config = installer::RecoveryConfig {
+            first_failure: installer::RecoveryAction::Restart,
+            second_failure: installer::RecoveryAction::Reboot,
+            subsequent_failures: installer::RecoveryAction::RunCommand,
+            reset_period: 3600,
+            restart_delay: 120000,
+        };
+
+        assert!(matches!(
+            config.first_failure,
+            installer::RecoveryAction::Restart
+        ));
+        assert!(matches!(
+            config.second_failure,
+            installer::RecoveryAction::Reboot
+        ));
+        assert!(matches!(
+            config.subsequent_failures,
+            installer::RecoveryAction::RunCommand
+        ));
+        assert_eq!(config.reset_period, 3600);
+        assert_eq!(config.restart_delay, 120000);
+    }
+
+    #[test]
+    fn test_service_constants() {
+        assert_eq!(SERVICE_NAME, "ESTAutoEnroll");
+        assert!(!SERVICE_DISPLAY_NAME.is_empty());
+        assert!(!SERVICE_DESCRIPTION.is_empty());
+    }
+
+    #[cfg(not(windows))]
+    #[test]
+    fn test_non_windows_stubs() {
+        let config = installer::InstallConfig::default();
+
+        // All operations should fail on non-Windows
+        assert!(installer::install_service(&config).is_err());
+        assert!(installer::uninstall_service("test").is_err());
+        assert!(installer::start_service("test").is_err());
+        assert!(installer::stop_service("test").is_err());
+        assert!(installer::get_service_status("test").is_err());
+    }
 }

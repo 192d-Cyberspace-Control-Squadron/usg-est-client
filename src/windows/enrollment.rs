@@ -872,4 +872,209 @@ mod tests {
         let handle = KeyHandle("test-key-123".to_string());
         assert_eq!(handle.id(), "test-key-123");
     }
+
+    // ===== Additional Phase 11.8 Enrollment Tests =====
+
+    #[test]
+    fn test_all_enrollment_status_variants() {
+        // Ensure all status variants are constructible and have descriptions
+        let statuses = [
+            EnrollmentStatus::NotEnrolled,
+            EnrollmentStatus::Enrolled,
+            EnrollmentStatus::RenewalNeeded,
+            EnrollmentStatus::Expired,
+            EnrollmentStatus::Pending,
+            EnrollmentStatus::Failed,
+        ];
+
+        for status in &statuses {
+            assert!(!status.description().is_empty());
+        }
+    }
+
+    #[test]
+    fn test_enrollment_status_pending_description() {
+        assert_eq!(
+            EnrollmentStatus::Pending.description(),
+            "Enrollment pending approval"
+        );
+    }
+
+    #[test]
+    fn test_enrollment_status_failed_description() {
+        assert_eq!(EnrollmentStatus::Failed.description(), "Enrollment failed");
+    }
+
+    #[test]
+    fn test_enrollment_options_custom() {
+        let opts = EnrollmentOptions {
+            pending_timeout: 7200,
+            pending_check_interval: 120,
+            force: true,
+            archive_old: false,
+            new_key_on_renewal: false,
+        };
+
+        assert_eq!(opts.pending_timeout, 7200);
+        assert_eq!(opts.pending_check_interval, 120);
+        assert!(opts.force);
+        assert!(!opts.archive_old);
+        assert!(!opts.new_key_on_renewal);
+    }
+
+    #[test]
+    fn test_recovery_options_custom() {
+        let opts = RecoveryOptions {
+            force_reenroll: true,
+            delete_existing: true,
+            regenerate_key: true,
+            refresh_ca_certs: true,
+        };
+
+        assert!(opts.force_reenroll);
+        assert!(opts.delete_existing);
+        assert!(opts.regenerate_key);
+        assert!(opts.refresh_ca_certs);
+    }
+
+    #[test]
+    fn test_enrollment_result_structure() {
+        let result = EnrollmentResult {
+            thumbprint: "ABC123".to_string(),
+            subject: "CN=test.example.com".to_string(),
+            not_after: 1735689600,
+            is_renewal: false,
+            duration_ms: 1500,
+        };
+
+        assert_eq!(result.thumbprint, "ABC123");
+        assert_eq!(result.subject, "CN=test.example.com");
+        assert_eq!(result.not_after, 1735689600);
+        assert!(!result.is_renewal);
+        assert_eq!(result.duration_ms, 1500);
+    }
+
+    #[test]
+    fn test_enrollment_result_renewal() {
+        let result = EnrollmentResult {
+            thumbprint: "DEF456".to_string(),
+            subject: "CN=renewed.example.com".to_string(),
+            not_after: 1767225600,
+            is_renewal: true,
+            duration_ms: 2500,
+        };
+
+        assert!(result.is_renewal);
+    }
+
+    #[test]
+    fn test_key_handle_empty() {
+        let handle = KeyHandle(String::new());
+        assert_eq!(handle.id(), "");
+    }
+
+    #[test]
+    fn test_key_handle_with_special_chars() {
+        let handle = KeyHandle("key-with-dashes-and_underscores".to_string());
+        assert_eq!(handle.id(), "key-with-dashes-and_underscores");
+    }
+
+    #[test]
+    fn test_certificate_info_structure() {
+        let info = CertificateInfo {
+            thumbprint: "1234ABCD".to_string(),
+            subject: "CN=test".to_string(),
+            issuer: "CN=Test CA".to_string(),
+            not_before: 1704067200,
+            not_after: 1735689600,
+            days_remaining: 365,
+            has_private_key: true,
+        };
+
+        assert_eq!(info.thumbprint, "1234ABCD");
+        assert_eq!(info.subject, "CN=test");
+        assert_eq!(info.issuer, "CN=Test CA");
+        assert!(info.has_private_key);
+        assert_eq!(info.days_remaining, 365);
+    }
+
+    #[test]
+    fn test_certificate_info_expired() {
+        let info = CertificateInfo {
+            thumbprint: "EXPIRED".to_string(),
+            subject: "CN=expired".to_string(),
+            issuer: "CN=Test CA".to_string(),
+            not_before: 1640995200,
+            not_after: 1672531200,
+            days_remaining: -365, // Negative means expired
+            has_private_key: true,
+        };
+
+        assert!(info.days_remaining < 0);
+    }
+
+    #[test]
+    fn test_certificate_info_no_private_key() {
+        let info = CertificateInfo {
+            thumbprint: "NOKEY".to_string(),
+            subject: "CN=nokey".to_string(),
+            issuer: "CN=Test CA".to_string(),
+            not_before: 1704067200,
+            not_after: 1735689600,
+            days_remaining: 365,
+            has_private_key: false,
+        };
+
+        assert!(!info.has_private_key);
+    }
+
+    #[test]
+    fn test_enrollment_status_equality() {
+        assert_eq!(EnrollmentStatus::Enrolled, EnrollmentStatus::Enrolled);
+        assert_ne!(EnrollmentStatus::Enrolled, EnrollmentStatus::Expired);
+    }
+
+    #[test]
+    fn test_enrollment_result_clone() {
+        let result = EnrollmentResult {
+            thumbprint: "CLONE".to_string(),
+            subject: "CN=clone".to_string(),
+            not_after: 1735689600,
+            is_renewal: false,
+            duration_ms: 100,
+        };
+
+        let cloned = result.clone();
+        assert_eq!(result.thumbprint, cloned.thumbprint);
+        assert_eq!(result.subject, cloned.subject);
+    }
+
+    #[test]
+    fn test_enrollment_options_clone() {
+        let opts = EnrollmentOptions {
+            pending_timeout: 1800,
+            pending_check_interval: 30,
+            force: true,
+            archive_old: true,
+            new_key_on_renewal: true,
+        };
+
+        let cloned = opts.clone();
+        assert_eq!(opts.pending_timeout, cloned.pending_timeout);
+        assert_eq!(opts.force, cloned.force);
+    }
+
+    #[test]
+    fn test_recovery_options_clone() {
+        let opts = RecoveryOptions {
+            force_reenroll: true,
+            delete_existing: false,
+            regenerate_key: true,
+            refresh_ca_certs: false,
+        };
+
+        let cloned = opts.clone();
+        assert_eq!(opts.force_reenroll, cloned.force_reenroll);
+        assert_eq!(opts.delete_existing, cloned.delete_existing);
+    }
 }

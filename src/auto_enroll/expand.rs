@@ -265,4 +265,307 @@ mod tests {
             std::env::remove_var("TEST_DIR");
         }
     }
+
+    // ===== Additional Phase 11.8 Variable Expansion Tests =====
+
+    #[test]
+    fn test_expand_empty_string() {
+        let result = expand_variables("").unwrap();
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_expand_no_closing_brace_at_end() {
+        let result = expand_variables("prefix ${VAR").unwrap();
+        assert_eq!(result, "prefix ${VAR");
+    }
+
+    #[test]
+    fn test_expand_empty_variable_name() {
+        // ${} should be left unchanged since it's not a valid variable name
+        let result = expand_variables("prefix ${}suffix").unwrap();
+        assert_eq!(result, "prefix ${}suffix");
+    }
+
+    #[test]
+    fn test_expand_consecutive_variables() {
+        // SAFETY: This is a test, no other threads are accessing these variables
+        unsafe {
+            std::env::set_var("TEST_X", "X");
+            std::env::set_var("TEST_Y", "Y");
+            std::env::set_var("TEST_Z", "Z");
+        }
+        let result = expand_variables("${TEST_X}${TEST_Y}${TEST_Z}").unwrap();
+        assert_eq!(result, "XYZ");
+        unsafe {
+            std::env::remove_var("TEST_X");
+            std::env::remove_var("TEST_Y");
+            std::env::remove_var("TEST_Z");
+        }
+    }
+
+    #[test]
+    fn test_expand_variable_with_special_chars() {
+        // SAFETY: This is a test, no other threads are accessing this variable
+        unsafe {
+            std::env::set_var("TEST_SPECIAL", "value with spaces & symbols!");
+        }
+        let result = expand_variables("data: ${TEST_SPECIAL}").unwrap();
+        assert_eq!(result, "data: value with spaces & symbols!");
+        unsafe {
+            std::env::remove_var("TEST_SPECIAL");
+        }
+    }
+
+    #[test]
+    fn test_expand_nested_dollar_sign() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_DOLLAR", "has$dollar");
+        }
+        let result = expand_variables("${TEST_DOLLAR}").unwrap();
+        assert_eq!(result, "has$dollar");
+        unsafe {
+            std::env::remove_var("TEST_DOLLAR");
+        }
+    }
+
+    #[test]
+    fn test_expand_variable_that_looks_like_variable() {
+        // Test variable that contains ${...} pattern in its value
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_META", "${OTHER_VAR}");
+        }
+        let result = expand_variables("${TEST_META}").unwrap();
+        // Note: since OTHER_VAR doesn't exist, it's left as-is
+        assert_eq!(result, "${OTHER_VAR}");
+        unsafe {
+            std::env::remove_var("TEST_META");
+        }
+    }
+
+    #[test]
+    fn test_expand_dollar_without_brace() {
+        let result = expand_variables("price $100").unwrap();
+        assert_eq!(result, "price $100");
+    }
+
+    #[test]
+    fn test_expand_double_dollar() {
+        let result = expand_variables("$$VAR$$").unwrap();
+        assert_eq!(result, "$$VAR$$");
+    }
+
+    #[test]
+    fn test_expand_username() {
+        let result = expand_variables("${USERNAME}").unwrap();
+        // On most systems, USERNAME or USER is set
+        // The function falls back to USER if USERNAME isn't set
+        if !result.contains("${") {
+            assert!(!result.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_expand_home_and_userprofile() {
+        // Both HOME and USERPROFILE should resolve to the same thing
+        let home_result = expand_variables("${HOME}").unwrap();
+        let profile_result = expand_variables("${USERPROFILE}").unwrap();
+
+        // If either expanded successfully, they should be the same
+        if !home_result.contains("${") && !profile_result.contains("${") {
+            assert_eq!(home_result, profile_result);
+        }
+    }
+
+    #[test]
+    fn test_expand_tmp_and_temp() {
+        // Both TEMP and TMP should resolve to the same thing
+        let temp_result = expand_variables("${TEMP}").unwrap();
+        let tmp_result = expand_variables("${TMP}").unwrap();
+
+        assert!(!temp_result.is_empty());
+        assert!(!tmp_result.is_empty());
+        // Both should resolve to temp dir
+        assert_eq!(temp_result, tmp_result);
+    }
+
+    #[test]
+    fn test_expand_programdata() {
+        let result = expand_variables("${PROGRAMDATA}").unwrap();
+        // On Unix, this falls back to /var/lib
+        // On Windows, it should be set
+        if !result.contains("${") {
+            assert!(!result.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_expand_localappdata() {
+        let result = expand_variables("${LOCALAPPDATA}").unwrap();
+        // Should resolve on most platforms via dirs crate
+        if !result.contains("${") {
+            assert!(!result.is_empty());
+        }
+    }
+
+    #[test]
+    fn test_expand_fqdn_pattern() {
+        // Test common pattern: ${COMPUTERNAME}.${USERDNSDOMAIN}
+        let result = expand_variables("${COMPUTERNAME}.${USERDNSDOMAIN}").unwrap();
+        // COMPUTERNAME should expand, USERDNSDOMAIN may or may not depending on platform
+        assert!(result.len() > 0);
+    }
+
+    #[test]
+    fn test_expand_mixed_known_and_unknown() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_KNOWN_VAR", "known_value");
+        }
+        let result = expand_variables("${TEST_KNOWN_VAR} and ${UNKNOWN_XYZ_VAR}").unwrap();
+        assert_eq!(result, "known_value and ${UNKNOWN_XYZ_VAR}");
+        unsafe {
+            std::env::remove_var("TEST_KNOWN_VAR");
+        }
+    }
+
+    #[test]
+    fn test_expand_variable_at_start() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_START", "start");
+        }
+        let result = expand_variables("${TEST_START} of string").unwrap();
+        assert_eq!(result, "start of string");
+        unsafe {
+            std::env::remove_var("TEST_START");
+        }
+    }
+
+    #[test]
+    fn test_expand_variable_at_end() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_END", "end");
+        }
+        let result = expand_variables("string at the ${TEST_END}").unwrap();
+        assert_eq!(result, "string at the end");
+        unsafe {
+            std::env::remove_var("TEST_END");
+        }
+    }
+
+    #[test]
+    fn test_expand_only_variable() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_ONLY", "only_value");
+        }
+        let result = expand_variables("${TEST_ONLY}").unwrap();
+        assert_eq!(result, "only_value");
+        unsafe {
+            std::env::remove_var("TEST_ONLY");
+        }
+    }
+
+    #[test]
+    fn test_expand_variable_with_numbers() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_VAR_123_ABC", "numeric_name");
+        }
+        let result = expand_variables("${TEST_VAR_123_ABC}").unwrap();
+        assert_eq!(result, "numeric_name");
+        unsafe {
+            std::env::remove_var("TEST_VAR_123_ABC");
+        }
+    }
+
+    #[test]
+    fn test_expand_variable_with_underscores() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST___UNDERSCORES___", "underscored");
+        }
+        let result = expand_variables("${TEST___UNDERSCORES___}").unwrap();
+        assert_eq!(result, "underscored");
+        unsafe {
+            std::env::remove_var("TEST___UNDERSCORES___");
+        }
+    }
+
+    #[test]
+    fn test_expand_long_value() {
+        let long_value = "a".repeat(10000);
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_LONG", &long_value);
+        }
+        let result = expand_variables("prefix_${TEST_LONG}_suffix").unwrap();
+        assert_eq!(result, format!("prefix_{long_value}_suffix"));
+        unsafe {
+            std::env::remove_var("TEST_LONG");
+        }
+    }
+
+    #[test]
+    fn test_expand_variable_replaces_to_empty() {
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("TEST_EMPTY_VAL", "");
+        }
+        let result = expand_variables("before${TEST_EMPTY_VAL}after").unwrap();
+        assert_eq!(result, "beforeafter");
+        unsafe {
+            std::env::remove_var("TEST_EMPTY_VAL");
+        }
+    }
+
+    #[test]
+    fn test_get_variable_value_fallback_to_env() {
+        // Test that custom variable names fall back to environment
+        // SAFETY: This is a test
+        unsafe {
+            std::env::set_var("CUSTOM_TEST_VAR_XYZ", "custom_value");
+        }
+        let value = get_variable_value("CUSTOM_TEST_VAR_XYZ");
+        assert_eq!(value, Some("custom_value".to_string()));
+        unsafe {
+            std::env::remove_var("CUSTOM_TEST_VAR_XYZ");
+        }
+    }
+
+    #[test]
+    fn test_get_computer_name_returns_something() {
+        // This should return something on most platforms
+        let name = get_computer_name();
+        // hostname crate should work, or COMPUTERNAME env var
+        assert!(name.is_some() || std::env::var("COMPUTERNAME").is_err());
+    }
+
+    #[test]
+    fn test_get_username_returns_something() {
+        // USERNAME or USER should be set on most systems
+        let username = get_username();
+        // At least one of USERNAME or USER should be set
+        if std::env::var("USERNAME").is_ok() || std::env::var("USER").is_ok() {
+            assert!(username.is_some());
+        }
+    }
+
+    #[test]
+    fn test_get_home_dir_returns_something() {
+        let home = get_home_dir();
+        // dirs crate should be able to find home on all platforms
+        assert!(home.is_some());
+    }
+
+    #[test]
+    fn test_get_temp_dir_returns_something() {
+        let temp = get_temp_dir();
+        assert!(temp.is_some());
+        assert!(!temp.unwrap().is_empty());
+    }
 }

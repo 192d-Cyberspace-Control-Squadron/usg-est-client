@@ -956,4 +956,720 @@ common_name = "test"
         let algo: KeyAlgorithm = serde_json::from_str("\"rsa-2048\"").unwrap();
         assert_eq!(algo, KeyAlgorithm::Rsa2048);
     }
+
+    // ===== Additional Phase 11.8 Tests =====
+
+    #[test]
+    fn test_invalid_toml_syntax() {
+        let toml = r#"
+[server
+url = "https://est.example.com"
+"#;
+
+        let result = AutoEnrollConfig::from_toml(toml);
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Invalid TOML"));
+    }
+
+    #[test]
+    fn test_unknown_field_rejected() {
+        // deny_unknown_fields should reject unknown keys
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+unknown_field = "value"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let result = AutoEnrollConfig::from_toml(toml);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_missing_required_section() {
+        // Missing [certificate] section should fail
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+"#;
+
+        let result = AutoEnrollConfig::from_toml(toml);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_validation_http_url_rejected() {
+        let toml = r#"
+[server]
+url = "http://est.example.com"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("HTTPS"));
+    }
+
+    #[test]
+    fn test_validation_explicit_trust_without_ca_bundle() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[trust]
+mode = "explicit"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("ca_bundle_path"));
+    }
+
+    #[test]
+    fn test_validation_bootstrap_trust_without_fingerprint() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[trust]
+mode = "bootstrap"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("bootstrap_fingerprint")
+        );
+    }
+
+    #[test]
+    fn test_validation_client_cert_without_paths() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[authentication]
+method = "client_cert"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.validate();
+        assert!(result.is_err());
+        let err = result.unwrap_err().to_string();
+        assert!(err.contains("cert_store") || err.contains("cert_path"));
+    }
+
+    #[test]
+    fn test_validation_missing_common_name() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = ""
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("common_name"));
+    }
+
+    #[test]
+    fn test_validation_renewal_zero_threshold() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[renewal]
+enabled = true
+threshold_days = 0
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("threshold_days"));
+    }
+
+    #[test]
+    fn test_validation_renewal_zero_check_interval() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[renewal]
+enabled = true
+threshold_days = 30
+check_interval_hours = 0
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.validate();
+        assert!(result.is_err());
+        assert!(
+            result
+                .unwrap_err()
+                .to_string()
+                .contains("check_interval_hours")
+        );
+    }
+
+    #[test]
+    fn test_valid_config_with_webpki_trust() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[trust]
+mode = "web_pki"
+
+[certificate]
+common_name = "test.example.com"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert!(config.validate().is_ok());
+        assert_eq!(config.trust.mode, TrustMode::WebPki);
+    }
+
+    #[test]
+    fn test_valid_config_with_insecure_trust() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[trust]
+mode = "insecure"
+
+[certificate]
+common_name = "test.example.com"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert!(config.validate().is_ok());
+        assert_eq!(config.trust.mode, TrustMode::Insecure);
+    }
+
+    #[test]
+    fn test_all_key_algorithms() {
+        for (algo_str, expected) in [
+            ("ecdsa-p256", KeyAlgorithm::EcdsaP256),
+            ("ecdsa-p384", KeyAlgorithm::EcdsaP384),
+            ("rsa-2048", KeyAlgorithm::Rsa2048),
+            ("rsa-3072", KeyAlgorithm::Rsa3072),
+            ("rsa-4096", KeyAlgorithm::Rsa4096),
+        ] {
+            let algo: KeyAlgorithm = serde_json::from_str(&format!("\"{algo_str}\"")).unwrap();
+            assert_eq!(algo, expected);
+        }
+    }
+
+    #[test]
+    fn test_all_key_providers() {
+        for (provider_str, expected) in [
+            ("software", KeyProvider::Software),
+            ("cng", KeyProvider::Cng),
+            ("tpm", KeyProvider::Tpm),
+            ("pkcs11", KeyProvider::Pkcs11),
+        ] {
+            let provider: KeyProvider =
+                serde_json::from_str(&format!("\"{provider_str}\"")).unwrap();
+            assert_eq!(provider, expected);
+        }
+    }
+
+    #[test]
+    fn test_all_trust_modes() {
+        for (mode_str, expected) in [
+            ("web_pki", TrustMode::WebPki),
+            ("explicit", TrustMode::Explicit),
+            ("bootstrap", TrustMode::Bootstrap),
+            ("insecure", TrustMode::Insecure),
+        ] {
+            let mode: TrustMode = serde_json::from_str(&format!("\"{mode_str}\"")).unwrap();
+            assert_eq!(mode, expected);
+        }
+    }
+
+    #[test]
+    fn test_all_auth_methods() {
+        for (method_str, expected) in [
+            ("none", AuthMethod::None),
+            ("http_basic", AuthMethod::HttpBasic),
+            ("client_cert", AuthMethod::ClientCert),
+            ("auto", AuthMethod::Auto),
+        ] {
+            let method: AuthMethod = serde_json::from_str(&format!("\"{method_str}\"")).unwrap();
+            assert_eq!(method, expected);
+        }
+    }
+
+    #[test]
+    fn test_key_usage_deserialization() {
+        for usage_str in [
+            "digital_signature",
+            "non_repudiation",
+            "key_encipherment",
+            "data_encipherment",
+            "key_agreement",
+            "key_cert_sign",
+            "crl_sign",
+            "encipher_only",
+            "decipher_only",
+        ] {
+            let result: Result<KeyUsage, _> =
+                serde_json::from_str(&format!("\"{usage_str}\""));
+            assert!(result.is_ok(), "Failed to parse KeyUsage: {usage_str}");
+        }
+    }
+
+    #[test]
+    fn test_extended_key_usage_deserialization() {
+        for eku_str in [
+            "server_auth",
+            "client_auth",
+            "code_signing",
+            "email_protection",
+            "time_stamping",
+            "ocsp_signing",
+            "smart_card_logon",
+        ] {
+            let result: Result<ExtendedKeyUsage, _> =
+                serde_json::from_str(&format!("\"{eku_str}\""));
+            assert!(
+                result.is_ok(),
+                "Failed to parse ExtendedKeyUsage: {eku_str}"
+            );
+        }
+    }
+
+    #[test]
+    fn test_san_config_with_ip_addresses() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[certificate.san]
+dns = ["test.example.com"]
+ip = ["192.168.1.1", "10.0.0.1"]
+include_ip = true
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let san = config.certificate.san.unwrap();
+        assert_eq!(san.dns.len(), 1);
+        assert_eq!(san.ip.len(), 2);
+        assert!(san.include_ip);
+    }
+
+    #[test]
+    fn test_san_config_with_email_and_uri() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[certificate.san]
+email = ["admin@example.com"]
+uri = ["https://example.com/id"]
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let san = config.certificate.san.unwrap();
+        assert_eq!(san.email.len(), 1);
+        assert_eq!(san.uri.len(), 1);
+    }
+
+    #[test]
+    fn test_storage_config_all_fields() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[storage]
+windows_store = "LocalMachine\\My"
+friendly_name = "EST Certificate"
+cert_path = "/etc/est/cert.pem"
+key_path = "/etc/est/key.pem"
+chain_path = "/etc/est/chain.pem"
+archive_old = true
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert_eq!(
+            config.storage.windows_store,
+            Some("LocalMachine\\My".to_string())
+        );
+        assert_eq!(
+            config.storage.friendly_name,
+            Some("EST Certificate".to_string())
+        );
+        assert!(config.storage.archive_old);
+    }
+
+    #[test]
+    fn test_logging_config_all_fields() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[logging]
+level = "debug"
+path = "/var/log/est.log"
+windows_event_log = true
+json_format = true
+max_size_mb = 10
+max_files = 5
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert_eq!(config.logging.level, "debug");
+        assert!(config.logging.windows_event_log);
+        assert!(config.logging.json_format);
+        assert_eq!(config.logging.max_size_mb, Some(10));
+        assert_eq!(config.logging.max_files, Some(5));
+    }
+
+    #[test]
+    fn test_service_config_all_fields() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[service]
+start_type = "delayed"
+run_as = "NetworkService"
+dependencies = ["Tcpip", "Dnscache"]
+health_check_port = 8080
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert_eq!(config.service.start_type, "delayed");
+        assert_eq!(config.service.run_as, Some("NetworkService".to_string()));
+        assert_eq!(config.service.dependencies.len(), 2);
+        assert_eq!(config.service.health_check_port, Some(8080));
+    }
+
+    #[test]
+    fn test_config_round_trip() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+timeout_seconds = 120
+
+[certificate]
+common_name = "test.example.com"
+organization = "Test Org"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let serialized = config.to_toml().unwrap();
+        let reparsed = AutoEnrollConfig::from_toml(&serialized).unwrap();
+
+        assert_eq!(config.server.url, reparsed.server.url);
+        assert_eq!(
+            config.server.timeout_seconds,
+            reparsed.server.timeout_seconds
+        );
+        assert_eq!(
+            config.certificate.common_name,
+            reparsed.certificate.common_name
+        );
+        assert_eq!(
+            config.certificate.organization,
+            reparsed.certificate.organization
+        );
+    }
+
+    #[test]
+    fn test_default_values() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+
+        // Server defaults
+        assert_eq!(config.server.timeout_seconds, 60);
+        assert!(config.server.ca_label.is_none());
+        assert!(config.server.channel_binding.is_none());
+
+        // Trust defaults
+        assert_eq!(config.trust.mode, TrustMode::WebPki);
+
+        // Auth defaults
+        assert_eq!(config.authentication.method, AuthMethod::None);
+
+        // Renewal defaults
+        assert!(config.renewal.enabled);
+        assert_eq!(config.renewal.threshold_days, 30);
+        assert_eq!(config.renewal.check_interval_hours, 6);
+        assert_eq!(config.renewal.max_retries, 5);
+        assert_eq!(config.renewal.retry_delay_minutes, 30);
+
+        // Logging defaults
+        assert_eq!(config.logging.level, "info");
+        assert!(!config.logging.windows_event_log);
+        assert!(!config.logging.json_format);
+
+        // Service defaults (uses Default trait when section is missing)
+        // The #[serde(default)] uses ServiceConfig::default() which has empty strings
+        assert!(config.service.run_as.is_none());
+        assert!(config.service.dependencies.is_empty());
+    }
+
+    #[test]
+    fn test_service_section_defaults() {
+        // When [service] section exists, serde defaults apply
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[service]
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        // With the section present, serde defaults for individual fields apply
+        assert_eq!(config.service.start_type, "automatic");
+    }
+
+    #[test]
+    fn test_key_config_defaults() {
+        let key_config = KeyConfig::default();
+        assert_eq!(key_config.algorithm, KeyAlgorithm::EcdsaP256);
+        assert_eq!(key_config.provider, KeyProvider::Software);
+        assert!(key_config.non_exportable);
+        assert!(!key_config.attestation);
+    }
+
+    #[test]
+    fn test_valid_config_with_http_basic_auth() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[authentication]
+method = "http_basic"
+username = "testuser"
+password_source = "env:EST_PASSWORD"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_valid_config_with_client_cert_files() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[authentication]
+method = "client_cert"
+cert_path = "/path/to/cert.pem"
+key_path = "/path/to/key.pem"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_valid_config_with_client_cert_store() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[authentication]
+method = "client_cert"
+cert_store = "LocalMachine\\My"
+cert_thumbprint = "auto"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_valid_config_with_explicit_trust() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[trust]
+mode = "explicit"
+ca_bundle_path = "/path/to/ca-bundle.pem"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_valid_config_with_bootstrap_trust() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[trust]
+mode = "bootstrap"
+bootstrap_fingerprint = "sha256:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90:AB:CD:EF:12:34:56:78:90"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        assert!(config.validate().is_ok());
+    }
+
+    #[test]
+    fn test_resolve_password_env_var() {
+        // SAFETY: This is a test, no other threads are accessing this variable
+        unsafe {
+            std::env::set_var("TEST_EST_PASSWORD_12345", "secret123");
+        }
+
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[authentication]
+method = "http_basic"
+username = "testuser"
+password_source = "env:TEST_EST_PASSWORD_12345"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let password = config.resolve_password().unwrap();
+        assert_eq!(password, "secret123");
+
+        unsafe {
+            std::env::remove_var("TEST_EST_PASSWORD_12345");
+        }
+    }
+
+    #[test]
+    fn test_resolve_password_missing_env_var() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[authentication]
+method = "http_basic"
+username = "testuser"
+password_source = "env:DEFINITELY_NOT_SET_XYZ987654"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.resolve_password();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("not set"));
+    }
+
+    #[test]
+    fn test_resolve_password_unknown_source() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[authentication]
+method = "http_basic"
+username = "testuser"
+password_source = "unknown_source_type"
+
+[certificate]
+common_name = "test"
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        let result = config.resolve_password();
+        assert!(result.is_err());
+        assert!(result.unwrap_err().to_string().contains("Unknown"));
+    }
+
+    #[test]
+    fn test_validation_disabled_renewal_allows_zero_values() {
+        let toml = r#"
+[server]
+url = "https://est.example.com"
+
+[certificate]
+common_name = "test"
+
+[renewal]
+enabled = false
+threshold_days = 0
+check_interval_hours = 0
+"#;
+
+        let config = AutoEnrollConfig::from_toml(toml).unwrap();
+        // When renewal is disabled, zero values should be allowed
+        assert!(config.validate().is_ok());
+    }
 }
