@@ -77,6 +77,9 @@ aes = { version = "0.8", optional = true }
 cbc = { version = "0.1", optional = true }
 des = { version = "0.8", optional = true }
 
+# CLI support (optional, for est-enroll binary)
+clap = { version = "4.5", features = ["derive"], optional = true }
+
 # Windows platform support (optional, Windows-only)
 [target.'cfg(windows)'.dependencies]
 windows = { version = "0.62", features = [
@@ -138,9 +141,15 @@ name = "est-service-install"
 path = "src/bin/est-service-install.rs"
 required-features = ["windows-service"]
 
+[[bin]]
+name = "est-enroll"
+path = "src/bin/est-enroll.rs"
+required-features = ["cli"]
+
 [features]
 default = ["csr-gen"]
 csr-gen = ["rcgen"]
+cli = ["clap", "auto-enroll", "tracing-subscriber"]
 hsm = []
 pkcs11 = ["hsm", "cryptoki", "hex", "uuid"]
 renewal = ["time"]
