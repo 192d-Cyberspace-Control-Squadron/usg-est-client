@@ -4,18 +4,18 @@
 
 This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enrollment over Secure Transport) client library in Rust.
 
-**Status: Core Implementation Complete ✅**
+## Status: Core Implementation Complete ✅**
 
 ---
 
-## Phase 1: Foundation ✅ COMPLETE
+### Phase 1: Foundation ✅ COMPLETE
 
-### 1.1 Project Setup
+#### 1.1 Project Setup
 
 - ✅ Create `Cargo.toml` with dependencies
 - ✅ Create directory structure (`src/`, `src/operations/`, `src/types/`, `examples/`)
 
-### 1.2 Error Handling (`src/error.rs`)
+#### 1.2 Error Handling (`src/error.rs`)
 
 - ✅ Define `EstError` enum with all variants:
   - `TlsConfig` - TLS configuration errors
@@ -38,7 +38,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Helper constructors for all error types
 - ✅ `is_retryable()` and `retry_after()` methods
 
-### 1.3 Configuration (`src/config.rs`)
+#### 1.3 Configuration (`src/config.rs`)
 
 - ✅ `EstClientConfig` struct with all fields
 - ✅ `ClientIdentity` struct (PEM cert chain + key)
@@ -48,7 +48,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Builder pattern for `EstClientConfig`
 - ✅ URL building with optional CA label support
 
-### 1.4 TLS Configuration (`src/tls.rs`)
+#### 1.4 TLS Configuration (`src/tls.rs`)
 
 - ✅ Build `rustls::ClientConfig` from `EstClientConfig`
 - ✅ Configure TLS 1.2+ minimum version
@@ -58,9 +58,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 2: Core Types ✅ COMPLETE
+### Phase 2: Core Types ✅ COMPLETE
 
-### 2.1 PKCS#7/CMS Parsing (`src/types/pkcs7.rs`)
+#### 2.1 PKCS#7/CMS Parsing (`src/types/pkcs7.rs`)
 
 - ✅ Parse `application/pkcs7-mime` responses
 - ✅ Extract certificates from CMS SignedData (certs-only)
@@ -68,7 +68,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Convert to `x509_cert::Certificate` types
 - ✅ Helper functions for encoding/decoding
 
-### 2.2 Type Definitions (`src/types/mod.rs`)
+#### 2.2 Type Definitions (`src/types/mod.rs`)
 
 - ✅ `CaCertificates` - Collection of CA certificates
 - ✅ `EnrollmentResponse` enum (Issued/Pending)
@@ -78,9 +78,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 3: EST Client Core ✅ COMPLETE
+### Phase 3: EST Client Core ✅ COMPLETE
 
-### 3.1 Client Structure (`src/client.rs`)
+#### 3.1 Client Structure (`src/client.rs`)
 
 - ✅ `EstClient` struct with config and HTTP client
 - ✅ `EstClient::new(config)` async constructor
@@ -92,9 +92,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 4: Mandatory Operations ✅ COMPLETE
+### Phase 4: Mandatory Operations ✅ COMPLETE
 
-### 4.1 GET /cacerts
+#### 4.1 GET /cacerts
 
 - ✅ Make GET request to `/.well-known/est/cacerts`
 - ✅ Accept `application/pkcs7-mime` response
@@ -102,7 +102,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Parse CMS SignedData (certs-only)
 - ✅ Return `CaCertificates`
 
-### 4.2 POST /simpleenroll
+#### 4.2 POST /simpleenroll
 
 - ✅ Accept PKCS#10 CSR (DER bytes)
 - ✅ Base64 encode CSR body
@@ -113,7 +113,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Handle HTTP 401: Return `AuthenticationRequired`
 - ✅ Handle 4xx/5xx: Return `ServerError`
 
-### 4.3 POST /simplereenroll
+#### 4.3 POST /simplereenroll
 
 - ✅ Same flow as simpleenroll
 - ✅ POST to `/.well-known/est/simplereenroll`
@@ -122,9 +122,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 5: Optional Operations ✅ COMPLETE
+### Phase 5: Optional Operations ✅ COMPLETE
 
-### 5.1 CSR Attributes
+#### 5.1 CSR Attributes
 
 - ✅ `CsrAttributes` struct (`src/types/csr_attrs.rs`)
 - ✅ Parse `application/csrattrs` response (ASN.1 sequence)
@@ -133,7 +133,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Well-known OID constants
 - ✅ Helper methods (`contains_oid`, `oids()`)
 
-### 5.2 Server Key Generation
+#### 5.2 Server Key Generation
 
 - ✅ `ServerKeygenResponse` struct (cert + private key)
 - ✅ POST to `/.well-known/est/serverkeygen`
@@ -142,7 +142,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Detect encrypted private keys (CMS EnvelopedData)
 - ✅ PEM conversion helpers
 
-### 5.3 Full CMC
+#### 5.3 Full CMC
 
 - ✅ `CmcRequest` struct (PKIData) (`src/types/cmc.rs`)
 - ✅ `CmcResponse` struct (ResponseBody)
@@ -153,9 +153,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 6: CSR Generation ✅ COMPLETE
+### Phase 6: CSR Generation ✅ COMPLETE
 
-### 6.1 CSR Builder (`src/csr.rs`)
+#### 6.1 CSR Builder (`src/csr.rs`)
 
 - ✅ Feature gate: `#[cfg(feature = "csr-gen")]`
 - ✅ `CsrBuilder` struct with builder pattern
@@ -170,9 +170,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 7: Bootstrap/TOFU Mode ✅ COMPLETE
+### Phase 7: Bootstrap/TOFU Mode ✅ COMPLETE
 
-### 7.1 Bootstrap Client (`src/bootstrap.rs`)
+#### 7.1 Bootstrap Client (`src/bootstrap.rs`)
 
 - ✅ `BootstrapClient` struct (server URL + CA label)
 - ✅ Disable TLS server verification
@@ -185,9 +185,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 8: Integration ✅ COMPLETE
+### Phase 8: Integration ✅ COMPLETE
 
-### 8.1 Library Exports (`src/lib.rs`)
+#### 8.1 Library Exports (`src/lib.rs`)
 
 - ✅ Re-export public types
 - ✅ Re-export `EstClient`
@@ -196,13 +196,13 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ Module documentation
 - ✅ Version constant
 
-### 8.2 Examples (`examples/`)
+#### 8.2 Examples (`examples/`)
 
 - ✅ `simple_enroll.rs` - Basic enrollment flow
 - ✅ `reenroll.rs` - Certificate renewal
 - ✅ `bootstrap.rs` - TOFU CA discovery
 
-### 8.3 Testing
+#### 8.3 Testing
 
 - ✅ Unit tests for PKCS#7 parsing
 - ✅ Unit tests for CSR attributes parsing
@@ -215,9 +215,9 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 
 ---
 
-## Phase 9: Documentation ✅ COMPLETE
+### Phase 9: Documentation ✅ COMPLETE
 
-### 9.1 Comprehensive Documentation
+#### 9.1 Comprehensive Documentation
 
 - ✅ `docs/README.md` - Overview and quick start
 - ✅ `docs/getting-started.md` - Installation and basic usage
@@ -227,7 +227,7 @@ This roadmap tracks the implementation of a fully RFC 7030 compliant EST (Enroll
 - ✅ `docs/api-reference.md` - Complete API documentation
 - ✅ `docs/examples.md` - Usage examples and patterns
 
-### 9.2 Code Quality
+#### 9.2 Code Quality
 
 - ✅ All clippy warnings fixed
 - ✅ All 39 unit tests passing
