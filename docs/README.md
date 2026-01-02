@@ -66,7 +66,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────┐
 │                        EstClient                             │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
@@ -88,7 +88,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ## Project Structure
 
-```
+```text
 usg-est-client/
 ├── src/
 │   ├── lib.rs              # Public API exports

@@ -306,7 +306,7 @@ cargo run --example simple_enroll --features csr-gen
 
 ## Architecture
 
-```
+```text
 ┌─────────────────────────────────────────┐
 │          EstClient (main API)           │
 │  - simple_enroll()                      │
@@ -367,7 +367,7 @@ cargo doc --all-features --no-deps
 
 ## License
 
-Licensed under the Apache License, Version 2.0 ([LICENSE](LICENSE) or http://www.apache.org/licenses/LICENSE-2.0).
+Licensed under the Apache License, Version 2.0 ([LICENSE](LICENSE) or <http://www.apache.org/licenses/LICENSE-2.0>).
 
 ### Copyright
 
@@ -402,4 +402,6 @@ This project is under active development. See [ROADMAP.md](ROADMAP.md) for plann
 
 ---
 
-**Made with ❤️ in Rust**
+### Made with Rust
+
+Built with ❤️ and the Rust ecosystem.
