@@ -459,6 +459,348 @@ For Common Criteria evaluation:
 
 ---
 
+## Certificate Revocation
+
+Certificate revocation is essential for invalidating certificates before their natural expiration date. This library provides framework support for both CRL (Certificate Revocation Lists) and OCSP (Online Certificate Status Protocol).
+
+### Revocation Overview
+
+The `revocation` feature provides a unified API for checking certificate revocation status:
+
+```rust
+use usg_est_client::revocation::{RevocationChecker, RevocationConfig};
+
+// Create revocation checker
+let config = RevocationConfig::builder()
+    .enable_crl(true)
+    .enable_ocsp(true)
+    .crl_cache_duration(Duration::from_secs(3600))
+    .build();
+
+let checker = RevocationChecker::new(config);
+
+// Check certificate status
+let result = checker.check_revocation(&cert, &issuer).await?;
+
+if result.is_revoked() {
+    // Certificate has been revoked
+}
+```
+
+### CRL (Certificate Revocation Lists)
+
+#### How CRL Works
+
+1. CA publishes a signed list of revoked certificates
+2. Client downloads CRL from distribution points
+3. Client checks if certificate serial number is in the list
+4. CRL is cached locally for efficiency
+
+#### CRL Distribution Points
+
+CRLs are referenced in certificates via the CRL Distribution Points extension (OID 2.5.29.31):
+
+```rust
+// The library automatically extracts CRL URLs from certificates
+let crl_urls = checker.extract_crl_urls(&cert)?;
+```
+
+#### CRL Caching
+
+CRLs are cached to minimize network traffic:
+
+```rust
+let config = RevocationConfig::builder()
+    .crl_cache_duration(Duration::from_secs(3600))  // 1 hour
+    .crl_cache_max_entries(100)                     // Max cache size
+    .build();
+```
+
+**Cache Strategy:**
+
+- CRLs are cached by URL
+- Cache entries expire based on `crl_cache_duration`
+- Cache is also checked against CRL's `nextUpdate` field
+- Manual cache clear: `checker.clear_cache().await`
+
+#### CRL Security Considerations
+
+✅ **Best Practices:**
+
+- Always verify CRL signature against issuing CA
+- Check CRL's `thisUpdate` and `nextUpdate` fields
+- Use HTTPS for CRL distribution points when possible
+- Implement cache refresh before `nextUpdate` time
+- Monitor for unusually large CRL sizes (potential DoS)
+
+❌ **Security Risks:**
+
+- Unverified CRL signatures can be forged
+- Stale CRLs may not reflect recent revocations
+- Large CRLs can cause memory/bandwidth exhaustion
+- HTTP CRL distribution points can be tampered with
+
+#### CRL Limitations
+
+- **Scale**: CRLs grow as more certificates are revoked
+- **Freshness**: Only as current as last download
+- **Bandwidth**: Full CRL download required (Delta CRLs help but add complexity)
+- **Privacy**: Client may leak certificate serial numbers to CRL server
+
+### OCSP (Online Certificate Status Protocol)
+
+#### How OCSP Works
+
+1. Client extracts OCSP responder URL from certificate
+2. Client sends real-time status request to OCSP responder
+3. Responder returns signed status (good/revoked/unknown)
+4. Client validates response signature
+
+#### OCSP Responder URLs
+
+OCSP endpoints are referenced in certificates via the Authority Information Access extension (OID 1.3.6.1.5.5.7.1.1):
+
+```rust
+// The library automatically extracts OCSP URLs from certificates
+let ocsp_url = checker.extract_ocsp_url(&cert)?;
+```
+
+#### OCSP Configuration
+
+```rust
+let config = RevocationConfig::builder()
+    .enable_ocsp(true)
+    .ocsp_timeout(Duration::from_secs(10))  // Request timeout
+    .build();
+```
+
+#### OCSP Security Considerations
+
+✅ **Best Practices:**
+
+- Always verify OCSP response signature
+- Use nonces to prevent replay attacks
+- Implement reasonable timeouts (5-10 seconds)
+- Use HTTPS for OCSP responders
+- Validate response timestamps
+- Check response's `thisUpdate` and `nextUpdate`
+
+❌ **Security Risks:**
+- Unverified OCSP responses can be forged
+- Replay attacks without nonces
+- Privacy: OCSP request reveals which certificate you're checking
+- Availability: Real-time dependency on OCSP responder
+
+#### OCSP Stapling
+
+OCSP Stapling (TLS Certificate Status Request extension) improves privacy and performance:
+
+- Server caches OCSP response
+- Server includes ("staples") response in TLS handshake
+- Client doesn't need to contact OCSP responder
+- Reduces latency and improves privacy
+
+**Note:** OCSP Stapling is handled at the TLS layer and is transparent to the EST client.
+
+### Revocation Strategy
+
+#### Hard-Fail vs Soft-Fail
+
+**Hard-Fail (Strict):**
+
+```rust
+let config = RevocationConfig::builder()
+    .fail_on_unknown(true)  // Reject if status cannot be determined
+    .build();
+```
+
+- Pros: Maximum security
+- Cons: May block valid certificates if revocation service is unavailable
+
+**Soft-Fail (Permissive):**
+
+```rust
+let config = RevocationConfig::builder()
+    .fail_on_unknown(false)  // Allow if status cannot be determined
+    .build();
+```
+
+- Pros: Better availability
+- Cons: Revoked certificates may be accepted if revocation service is down
+
+#### Recommended Strategy
+
+For most production systems:
+
+```rust
+let config = RevocationConfig::builder()
+    .enable_crl(true)        // Enable CRL checking
+    .enable_ocsp(true)       // Enable OCSP checking
+    .fail_on_unknown(false)  // Soft-fail for availability
+    .crl_cache_duration(Duration::from_secs(3600))
+    .ocsp_timeout(Duration::from_secs(10))
+    .build();
+```
+
+**Checking Order:**
+
+1. Try OCSP first (faster, more current)
+2. Fall back to CRL if OCSP fails
+3. Return Unknown if both fail (soft-fail mode)
+
+#### High-Security Environments
+
+For environments requiring maximum security:
+
+```rust
+let config = RevocationConfig::builder()
+    .enable_crl(true)
+    .enable_ocsp(true)
+    .fail_on_unknown(true)   // Hard-fail: reject unknown status
+    .ocsp_timeout(Duration::from_secs(5))
+    .build();
+```
+
+Monitor revocation check failures and have fallback procedures for legitimate outages.
+
+### Implementation Status
+
+The current implementation provides a **framework** for revocation checking:
+
+✅ **Implemented:**
+
+- Configuration API (`RevocationConfig`)
+- Cache infrastructure for CRLs
+- Timeout handling for OCSP
+- Hard-fail/soft-fail policy
+- Unified checking API
+- Extension OID lookups (CRL Distribution Points, AIA)
+
+⚠️ **Framework Only (Requires Completion for Production):**
+
+- CRL download and HTTP fetching
+- CRL parsing (DER/PEM formats)
+- CRL signature verification
+- Certificate serial number lookup in CRL
+- OCSP request formatting (DER encoding)
+- OCSP response parsing
+- OCSP signature verification
+- OCSP nonce handling
+
+#### Production Readiness
+
+To complete the revocation implementation for production use:
+
+1. **Add CRL Parsing Dependency:**
+
+   ```toml
+   x509-parser = "0.15"  # or equivalent
+   ```
+
+2. **Implement CRL Operations:**
+   - Download CRL via HTTP/HTTPS (using `reqwest`)
+   - Parse CRL structure (DER/PEM)
+   - Verify CRL signature using issuer's public key
+   - Search CRL for certificate serial number
+   - Check revocation reason and time
+
+3. **Implement OCSP Operations:**
+   - Build OCSP request (DER encoding)
+   - Send HTTP POST to OCSP responder
+   - Parse OCSP response (DER decoding)
+   - Verify response signature
+   - Include and verify nonces
+   - Check response freshness
+
+4. **Additional Security:**
+   - Implement certificate serial number extraction
+   - Add issuer name/key hash matching
+   - Implement response caching for OCSP
+   - Add support for OCSP Must-Staple extension
+
+### Monitoring and Alerting
+
+Track these metrics for revocation checking:
+
+```rust
+// Example metrics to track
+metrics.increment("revocation_checks_total");
+metrics.increment(format!("revocation_status_{}", status));  // good/revoked/unknown
+metrics.increment("revocation_crl_cache_hits");
+metrics.increment("revocation_crl_cache_misses");
+metrics.increment("revocation_ocsp_timeouts");
+metrics.gauge("revocation_check_duration_ms", duration.as_millis() as f64);
+```
+
+**Recommended Alerts:**
+
+- Revocation check failure rate > 5%
+- OCSP timeout rate > 10%
+- CRL cache miss rate > 80% (may indicate cache issues)
+- Revoked certificate detected (critical alert)
+
+### Testing Revocation
+
+#### Test with Revoked Certificates
+
+```rust
+#[tokio::test]
+async fn test_revoked_certificate_detected() {
+    let checker = RevocationChecker::new(RevocationConfig::default());
+
+    // Use a known-revoked test certificate
+    let cert = load_test_cert("revoked.pem");
+    let issuer = load_test_cert("ca.pem");
+
+    let result = checker.check_revocation(&cert, &issuer).await.unwrap();
+    assert!(result.is_revoked());
+}
+```
+
+#### Mock OCSP Responder
+
+For testing, use a local OCSP responder or wiremock:
+
+```rust
+use wiremock::{MockServer, Mock, ResponseTemplate};
+
+#[tokio::test]
+async fn test_ocsp_revoked_response() {
+    let mock_server = MockServer::start().await;
+
+    Mock::given(method("POST"))
+        .respond_with(ResponseTemplate::new(200)
+            .set_body_bytes(create_ocsp_revoked_response()))
+        .mount(&mock_server)
+        .await;
+
+    // Test with mock OCSP responder
+}
+```
+
+### Security Checklist for Revocation
+
+Before enabling revocation checking in production:
+
+- [ ] CRL signature verification implemented
+- [ ] OCSP response signature verification implemented
+- [ ] OCSP nonce support enabled
+- [ ] Timeouts configured appropriately
+- [ ] Hard-fail vs soft-fail policy decided
+- [ ] Monitoring and alerting configured
+- [ ] CRL cache size limits enforced
+- [ ] HTTPS used for CRL/OCSP when possible
+- [ ] Fallback strategy documented
+- [ ] Regular testing with revoked certificates
+
+### RFC References
+
+- [RFC 5280](https://datatracker.ietf.org/doc/html/rfc5280) - X.509 PKI Certificate and CRL Profile (Section 5: CRLs)
+- [RFC 6960](https://datatracker.ietf.org/doc/html/rfc6960) - Online Certificate Status Protocol (OCSP)
+- [RFC 6961](https://datatracker.ietf.org/doc/html/rfc6961) - TLS Multiple Certificate Status Request Extension (OCSP Stapling)
+
+---
+
 ## Security Checklist
 
 Before deploying to production:
